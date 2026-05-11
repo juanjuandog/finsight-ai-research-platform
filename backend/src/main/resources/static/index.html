@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FinSight AI</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div>
+      <p class="eyebrow">FinSight AI</p>
+      <h1>Financial research intelligence console</h1>
+    </div>
+    <nav>
+      <a href="#overview">Overview</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#metrics">Metrics</a>
+      <a href="#retrieval">Retrieval</a>
+      <a href="#intelligence">Timeline & Graph</a>
+      <a href="#evaluation">Evaluation</a>
+    </nav>
+  </aside>
+
+  <main>
+    <section id="overview" class="toolbar">
+      <div>
+        <p class="eyebrow">Demo company</p>
+        <h2>600519 · Guizhou Moutai</h2>
+      </div>
+      <div class="actions">
+        <button id="runWorkflow">Run workflow</button>
+        <button id="runEvaluation">Run RAG evaluation</button>
+      </div>
+    </section>
+
+    <section class="grid stats">
+      <article>
+        <span>Workflow tasks</span>
+        <strong id="taskCount">-</strong>
+      </article>
+      <article>
+        <span>Metrics</span>
+        <strong id="metricCount">-</strong>
+      </article>
+      <article>
+        <span>Chunks</span>
+        <strong id="chunkCount">-</strong>
+      </article>
+      <article>
+        <span>Timeline events</span>
+        <strong id="eventCount">-</strong>
+      </article>
+    </section>
+
+    <section id="workflow" class="panel">
+      <div class="section-head">
+        <h2>Workflow</h2>
+        <span>Task state, idempotency, chained execution</span>
+      </div>
+      <div id="workflowList" class="list"></div>
+    </section>
+
+    <section id="metrics" class="panel">
+      <div class="section-head">
+        <h2>Metric Engine</h2>
+        <span>Versioned DAG output</span>
+      </div>
+      <div id="metricList" class="table"></div>
+    </section>
+
+    <section id="retrieval" class="panel">
+      <div class="section-head">
+        <h2>Hybrid Retrieval</h2>
+        <span>Keyword + vector evidence chunks</span>
+      </div>
+      <div class="search-row">
+        <input id="searchInput" value="现金流风险" aria-label="Search query">
+        <button id="searchButton">Search</button>
+      </div>
+      <div id="retrievalList" class="list"></div>
+    </section>
+
+    <section id="intelligence" class="grid two">
+      <article class="panel">
+        <div class="section-head">
+          <h2>Timeline</h2>
+          <span>Cross-document company state</span>
+        </div>
+        <div id="timelineList" class="list"></div>
+      </article>
+      <article class="panel">
+        <div class="section-head">
+          <h2>Knowledge Graph</h2>
+          <span>Entities and relations</span>
+        </div>
+        <div id="graphList" class="list"></div>
+      </article>
+    </section>
+
+    <section id="evaluation" class="panel">
+      <div class="section-head">
+        <h2>RAG Evaluation</h2>
+        <span>Evidence, answer, citation, latency</span>
+      </div>
+      <div id="evaluationSummary" class="summary"></div>
+      <div id="evaluationList" class="list"></div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
+

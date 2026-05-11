@@ -9,6 +9,7 @@ The first version focuses on architecture that is useful for interviews:
 - Financial metric calculation and risk signal detection.
 - Retrieval-augmented answer orchestration with evidence binding.
 - Separate Java business backend and Python AI capability service.
+- Static dashboard and RAG evaluation for demos and regression checks.
 
 ## Modules
 
@@ -23,6 +24,12 @@ Backend:
 ```bash
 cd backend
 mvn spring-boot:run
+```
+
+Dashboard:
+
+```bash
+open http://localhost:8080
 ```
 
 Backend with PostgreSQL profile:
@@ -66,6 +73,7 @@ GET /api/document-index/600519/search?q=现金流风险
 GET /api/metrics/600519/runs
 GET /api/intelligence/600519/timeline
 GET /api/intelligence/600519/graph
+POST /api/evaluations/rag/run
 ```
 
 ## Database Stage
@@ -160,4 +168,21 @@ Useful endpoints:
 POST /api/intelligence/600519/rebuild
 GET /api/intelligence/600519/timeline
 GET /api/intelligence/600519/graph
+```
+
+## Dashboard And Evaluation Stage
+
+The final stage adds a demo console and regression-style RAG evaluation:
+
+- Static dashboard is served by Spring Boot from `/`.
+- The dashboard shows workflow tasks, metric output, retrieval evidence, timeline events, graph counts, and evaluation results.
+- `EvaluationCaseCatalog` defines fixed financial QA test cases.
+- `RagEvaluationService` checks evidence coverage, answer keyword coverage, citation presence, and latency.
+
+Useful endpoints:
+
+```bash
+GET /
+GET /api/evaluations/rag/cases
+POST /api/evaluations/rag/run
 ```

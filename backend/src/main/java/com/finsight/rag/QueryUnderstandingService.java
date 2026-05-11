@@ -10,11 +10,12 @@ import java.util.Map;
 @Component
 public class QueryUnderstandingService {
     public Map<String, Object> parse(AskQuestionCommand command) {
+        String normalizedQuestion = command.question() == null ? "" : command.question().toLowerCase(Locale.ROOT);
         Map<String, Object> structured = new HashMap<>();
         structured.put("companySymbol", command.companySymbol());
         structured.put("timeRange", command.timeRange());
         structured.put("intent", inferIntent(command.question()));
-        structured.put("requiresMetrics", containsAny(command.question(), "毛利率", "roe", "现金流", "营收", "净利润", "资产负债率"));
+        structured.put("requiresMetrics", containsAny(normalizedQuestion, "毛利率", "roe", "盈利能力", "现金流", "营收", "净利润", "资产负债率"));
         structured.put("requiresDocuments", true);
         return structured;
     }
@@ -42,4 +43,3 @@ public class QueryUnderstandingService {
         return false;
     }
 }
-

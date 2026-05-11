@@ -22,3 +22,5 @@ curl -s "$BASE_URL/api/intelligence/600519/timeline"
 echo
 curl -s "$BASE_URL/api/intelligence/600519/graph"
 echo
+curl -s -X POST "$BASE_URL/api/evaluations/rag/run"
+echo
