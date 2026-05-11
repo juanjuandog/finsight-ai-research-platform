@@ -223,6 +223,36 @@ button:disabled {
   color: var(--muted);
 }
 
+.quote-box {
+  display: grid;
+  gap: 4px;
+  margin-top: 22px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper-soft);
+  text-align: left;
+}
+
+.quote-box span,
+.quote-box small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.quote-box strong {
+  color: var(--accent-dark);
+  font-family: Georgia, serif;
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+.quote-box em {
+  color: var(--green);
+  font-style: normal;
+  font-weight: 800;
+}
+
 .rule {
   height: 1px;
   margin: 14px 0 28px;

@@ -25,8 +25,19 @@ function escapeHtml(value) {
 }
 
 async function refresh() {
-  companies = await request("/api/companies").catch(() => companies);
-  updateCompanyCard();
+  const [nextCompanies, quote] = await Promise.all([
+    request("/api/companies").catch(() => companies),
+    request(`/api/market/quotes/${symbol}`).catch(error => ({
+      symbol,
+      name: `股票 ${symbol}`,
+      exchange: "CN",
+      realtime: false,
+      source: "LOCAL_ERROR",
+      message: error.message
+    }))
+  ]);
+  companies = nextCompanies;
+  updateCompanyCard(quote);
 
   const [tasks, metrics, chunks, timeline, graph] = await Promise.all([
     request("/api/workflows"),
@@ -61,15 +72,32 @@ async function refresh() {
   ].join("");
 }
 
-function updateCompanyCard() {
+function updateCompanyCard(quote = null) {
   const company = companies.find(item => item.symbol === symbol);
-  const name = company?.name || `股票 ${symbol}`;
+  const name = quote?.name || company?.name || `股票 ${symbol}`;
   const industry = company?.industry || "待分析";
-  const exchange = company?.exchange || "CN";
+  const exchange = quote?.exchange || company?.exchange || "CN";
   $("companyAvatar").textContent = name.slice(0, 1).toUpperCase();
   $("companyName").textContent = name;
   $("companyMeta").textContent = `股票代码 ${symbol} · ${exchange} · ${industry}`;
   $("companyDescription").textContent = `当前正在分析 ${name}。系统会围绕 ${industry} 行业特征，生成指标、证据、事件和图谱结果。`;
+  renderQuote(quote);
+}
+
+function renderQuote(quote) {
+  if (!quote) {
+    $("marketQuote").innerHTML = "<span>行情加载中</span>";
+    return;
+  }
+  const price = quote.currentPrice && Number(quote.currentPrice) > 0 ? Number(quote.currentPrice).toFixed(2) : "--";
+  const change = quote.changePercent != null && Number(quote.currentPrice || 0) > 0 ? `${Number(quote.changePercent).toFixed(2)}%` : "--";
+  const source = quote.realtime ? "实时行情" : "降级数据";
+  $("marketQuote").innerHTML = `
+    <span>${source}</span>
+    <strong>${price}</strong>
+    <em>${change}</em>
+    <small>${escapeHtml(quote.message || quote.source || "")}</small>
+  `;
 }
 
 function metricTable(metrics) {
