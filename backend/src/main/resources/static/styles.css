@@ -253,6 +253,130 @@ button:disabled {
   font-weight: 800;
 }
 
+.quote-box em.down {
+  color: #a54836;
+}
+
+.analysis-card {
+  min-height: 100%;
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 20px;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-weight: 800;
+}
+
+.rating.positive {
+  background: #edf8f1;
+  color: var(--green);
+}
+
+.rating.neutral {
+  background: #fff3d8;
+  color: var(--gold);
+}
+
+.rating.cautious {
+  background: #fae7df;
+  color: #a54836;
+}
+
+.conclusion {
+  margin: 0 0 28px;
+  color: var(--ink);
+  font-size: 23px;
+  line-height: 1.7;
+}
+
+.thesis-grid,
+.health-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.thesis-grid {
+  grid-template-columns: 1fr 1fr 180px;
+}
+
+.thesis-grid article,
+.health-card {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper-soft);
+}
+
+.thesis-grid span,
+.health-card span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.thesis-grid p {
+  margin: 9px 0 0;
+  color: var(--ink);
+}
+
+.thesis-grid strong {
+  display: block;
+  margin-top: 8px;
+  font-family: Georgia, serif;
+  font-size: 38px;
+  line-height: 1;
+}
+
+.health-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.health-card {
+  min-height: 180px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.health-card strong {
+  font-family: Georgia, serif;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.health-card p,
+.health-card small {
+  margin: 0;
+  color: var(--muted);
+}
+
+.health-card em {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.health-card.good em {
+  background: #edf8f1;
+  color: var(--green);
+}
+
+.health-card.watch em,
+.health-card.empty em {
+  background: #fff3d8;
+  color: var(--gold);
+}
+
+.health-card.risk em {
+  background: #fae7df;
+  color: #a54836;
+}
+
 .rule {
   height: 1px;
   margin: 14px 0 28px;
@@ -414,7 +538,9 @@ th {
 
   .profile-grid,
   .split,
-  .stats {
+  .stats,
+  .thesis-grid,
+  .health-grid {
     grid-template-columns: 1fr;
   }
 
