@@ -2,10 +2,8 @@ package com.finsight.rag;
 
 import com.finsight.domain.model.DocumentType;
 import com.finsight.domain.model.EvidenceChunk;
-import com.finsight.domain.model.FinancialDocument;
 import com.finsight.domain.model.FinancialMetric;
 import com.finsight.domain.model.RiskSignal;
-import com.finsight.domain.repository.DocumentRepository;
 import com.finsight.domain.repository.MetricRepository;
 import org.springframework.stereotype.Component;
 
@@ -15,34 +13,35 @@ import java.util.Map;
 
 @Component
 public class EvidenceRetriever {
-    private final DocumentRepository documentRepository;
     private final MetricRepository metricRepository;
+    private final HybridRetrievalGateway retrievalGateway;
 
-    public EvidenceRetriever(DocumentRepository documentRepository, MetricRepository metricRepository) {
-        this.documentRepository = documentRepository;
+    public EvidenceRetriever(MetricRepository metricRepository, HybridRetrievalGateway retrievalGateway) {
         this.metricRepository = metricRepository;
+        this.retrievalGateway = retrievalGateway;
     }
 
     public List<EvidenceChunk> retrieve(String question, Map<String, Object> structuredQuery) {
         String companySymbol = (String) structuredQuery.get("companySymbol");
         List<EvidenceChunk> evidence = new ArrayList<>();
-        List<FinancialDocument> documents = documentRepository.search(companySymbol, question, 6);
-        if (documents.isEmpty() && companySymbol != null) {
-            documents = documentRepository.findByCompanySymbol(companySymbol).stream().limit(6).toList();
-        }
-        for (FinancialDocument document : documents) {
-            evidence.add(toChunk(document, estimateScore(question, document)));
-        }
+        retrievalGateway.search(companySymbol, question, 6)
+                .forEach(hit -> evidence.add(toEvidence(hit)));
         if (Boolean.TRUE.equals(structuredQuery.get("requiresMetrics")) && companySymbol != null) {
             evidence.addAll(metricEvidence(companySymbol));
         }
         return evidence;
     }
 
-    private EvidenceChunk toChunk(FinancialDocument document, double score) {
-        String section = document.metadata().getOrDefault("section", "正文");
-        String text = document.content().length() > 180 ? document.content().substring(0, 180) : document.content();
-        return new EvidenceChunk(document.id(), document.title(), document.type(), document.publishedAt(), section, text, score);
+    private EvidenceChunk toEvidence(RetrievalHit hit) {
+        return new EvidenceChunk(
+                hit.chunk().documentId(),
+                hit.chunk().title(),
+                hit.chunk().documentType(),
+                hit.chunk().publishedAt(),
+                hit.chunk().section() + " / " + hit.channel(),
+                hit.chunk().text(),
+                hit.score()
+        );
     }
 
     private List<EvidenceChunk> metricEvidence(String companySymbol) {
@@ -67,15 +66,4 @@ public class EvidenceRetriever {
         return evidence;
     }
 
-    private double estimateScore(String question, FinancialDocument document) {
-        double score = 0.5;
-        if (question != null && document.content().contains(question)) {
-            score += 0.4;
-        }
-        if (document.type() == DocumentType.ANNUAL_REPORT || document.type() == DocumentType.RESEARCH_REPORT) {
-            score += 0.2;
-        }
-        return score;
-    }
 }
-

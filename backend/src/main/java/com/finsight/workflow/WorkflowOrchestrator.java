@@ -1,6 +1,7 @@
 package com.finsight.workflow;
 
 import com.finsight.application.MetricApplicationService;
+import com.finsight.application.DocumentIndexingService;
 import com.finsight.domain.FinancialDataIngestionTemplate;
 import org.springframework.stereotype.Service;
 
@@ -11,15 +12,18 @@ public class WorkflowOrchestrator {
     private final WorkflowTaskRepository taskRepository;
     private final FinancialDataIngestionTemplate dataSource;
     private final MetricApplicationService metricApplicationService;
+    private final DocumentIndexingService documentIndexingService;
 
     public WorkflowOrchestrator(
             WorkflowTaskRepository taskRepository,
             FinancialDataIngestionTemplate dataSource,
-            MetricApplicationService metricApplicationService
+            MetricApplicationService metricApplicationService,
+            DocumentIndexingService documentIndexingService
     ) {
         this.taskRepository = taskRepository;
         this.dataSource = dataSource;
         this.metricApplicationService = metricApplicationService;
+        this.documentIndexingService = documentIndexingService;
     }
 
     public void execute(String taskId) {
@@ -37,8 +41,15 @@ public class WorkflowOrchestrator {
                         "metric:" + companySymbol + ":" + task.id(),
                         Map.of("companySymbol", companySymbol, "parentTaskId", task.id())
                 );
+                WorkflowTask indexTask = WorkflowTask.created(
+                        WorkflowTaskType.DOCUMENT_INDEX_BUILD,
+                        "index:" + companySymbol + ":" + task.id(),
+                        Map.of("companySymbol", companySymbol, "parentTaskId", task.id())
+                );
                 taskRepository.save(metricTask);
+                taskRepository.save(indexTask);
                 execute(metricTask.id());
+                execute(indexTask.id());
             }
             case WorkflowTaskType.FINANCIAL_METRIC_RECALCULATION -> {
                 WorkflowTask runningTask = task.running();
@@ -51,15 +62,19 @@ public class WorkflowOrchestrator {
                     throw ex;
                 }
             }
-            case WorkflowTaskType.DOCUMENT_INDEX_BUILD -> markSucceeded(task);
+            case WorkflowTaskType.DOCUMENT_INDEX_BUILD -> {
+                WorkflowTask runningTask = task.running();
+                try {
+                    taskRepository.save(runningTask);
+                    documentIndexingService.indexCompany(stringPayload(task.payload(), "companySymbol"));
+                    taskRepository.save(runningTask.succeeded());
+                } catch (RuntimeException ex) {
+                    taskRepository.save(runningTask.failed(ex.getMessage()));
+                    throw ex;
+                }
+            }
             default -> throw new IllegalArgumentException("Unsupported workflow task type: " + task.taskType());
         }
-    }
-
-    private void markSucceeded(WorkflowTask task) {
-        WorkflowTask runningTask = task.running();
-        taskRepository.save(runningTask);
-        taskRepository.save(runningTask.succeeded());
     }
 
     private String stringPayload(Map<String, Object> payload, String key) {
@@ -70,4 +85,3 @@ public class WorkflowOrchestrator {
         return String.valueOf(value);
     }
 }
-
