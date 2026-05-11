@@ -235,7 +235,7 @@ async function search() {
   const results = await request(`/api/document-index/${symbol}/search?q=${query}`);
   $("retrievalList").innerHTML = results.map(hit =>
     item(hit.title, hit.text, `${hit.section} · 相关度 ${Number(hit.score).toFixed(2)}`)
-  ).join("") || item("暂无证据", "请先分析股票，系统会建立该股票的财报/研报证据索引。");
+  ).join("") || item("暂无证据", "请先分析股票，系统会建立该股票的公开财报和公告证据索引。");
 }
 
 $("runWorkflow").addEventListener("click", runWorkflow);
