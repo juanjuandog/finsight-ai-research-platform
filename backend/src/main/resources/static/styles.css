@@ -198,16 +198,13 @@ button:disabled {
 .avatar {
   width: 98px;
   height: 98px;
-  display: grid;
-  place-items: center;
+  display: block;
   margin: 8px auto 20px;
   border-radius: 50%;
   border: 6px solid #e7ded0;
-  background: #15110e;
-  color: #f4dcae;
-  font-family: Georgia, serif;
-  font-size: 48px;
-  font-weight: 800;
+  background: #fffdf8;
+  object-fit: cover;
+  box-shadow: 0 14px 34px rgba(93, 51, 32, .12);
 }
 
 .profile-card h2,
