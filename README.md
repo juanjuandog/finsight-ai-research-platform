@@ -55,6 +55,7 @@ uvicorn app.main:app --reload --port 8001
 2. `POST /api/metrics/recalculate/600519` calculates financial indicators and risk signals.
 3. `POST /api/analysis/ask` asks a source-grounded question.
 4. `POST /api/document-index/{symbol}/rebuild` rebuilds document chunks for retrieval.
+5. `POST /api/intelligence/{symbol}/rebuild` builds timeline events and a lightweight knowledge graph.
 
 Async workflow:
 
@@ -63,6 +64,8 @@ POST /api/ingestion/demo/async
 GET /api/workflows
 GET /api/document-index/600519/search?q=现金流风险
 GET /api/metrics/600519/runs
+GET /api/intelligence/600519/timeline
+GET /api/intelligence/600519/graph
 ```
 
 ## Database Stage
@@ -90,6 +93,7 @@ The workflow stage splits long financial data processing into task lifecycle and
   - RabbitMQ publisher enabled by `rabbitmq` profile.
 - `WorkflowOrchestrator` executes task types and links ingestion to metric recalculation.
 - `DOCUMENT_INDEX_BUILD` chunks ingested documents and writes retrieval-ready evidence chunks.
+- `COMPANY_INTELLIGENCE_BUILD` turns documents, metrics, and risk signals into timeline events and graph relations.
 - `RabbitWorkflowListener` consumes messages and moves failed messages to a dead-letter queue when RabbitMQ rejects them.
 
 Run:
@@ -138,4 +142,22 @@ POST /api/metrics/recalculate/600519
 GET /api/metrics/600519
 GET /api/metrics/600519/risks
 GET /api/metrics/600519/runs
+```
+
+## Intelligence Stage
+
+The intelligence stage upgrades isolated documents and metrics into company state modeling:
+
+- `CompanyIntelligenceService` extracts standard events from filings, research notes, metrics, and risk signals.
+- `CompanyEventRepository` stores a company timeline ordered by event date.
+- `KnowledgeGraphRepository` stores lightweight graph nodes and relations in PostgreSQL.
+- Graph entities include company, industry, document, product/keyword, financial metric, and risk event.
+- Graph relations include industry membership, published documents, mentioned keywords, financial metrics, risks, and timeline events.
+
+Useful endpoints:
+
+```bash
+POST /api/intelligence/600519/rebuild
+GET /api/intelligence/600519/timeline
+GET /api/intelligence/600519/graph
 ```

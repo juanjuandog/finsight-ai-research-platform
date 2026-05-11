@@ -18,3 +18,7 @@ curl -s "$BASE_URL/api/metrics/600519/risks"
 echo
 curl -s "$BASE_URL/api/metrics/600519/runs"
 echo
+curl -s "$BASE_URL/api/intelligence/600519/timeline"
+echo
+curl -s "$BASE_URL/api/intelligence/600519/graph"
+echo

@@ -2,6 +2,7 @@ package com.finsight.workflow;
 
 import com.finsight.application.MetricApplicationService;
 import com.finsight.application.DocumentIndexingService;
+import com.finsight.application.CompanyIntelligenceService;
 import com.finsight.domain.FinancialDataIngestionTemplate;
 import org.springframework.stereotype.Service;
 
@@ -13,17 +14,20 @@ public class WorkflowOrchestrator {
     private final FinancialDataIngestionTemplate dataSource;
     private final MetricApplicationService metricApplicationService;
     private final DocumentIndexingService documentIndexingService;
+    private final CompanyIntelligenceService companyIntelligenceService;
 
     public WorkflowOrchestrator(
             WorkflowTaskRepository taskRepository,
             FinancialDataIngestionTemplate dataSource,
             MetricApplicationService metricApplicationService,
-            DocumentIndexingService documentIndexingService
+            DocumentIndexingService documentIndexingService,
+            CompanyIntelligenceService companyIntelligenceService
     ) {
         this.taskRepository = taskRepository;
         this.dataSource = dataSource;
         this.metricApplicationService = metricApplicationService;
         this.documentIndexingService = documentIndexingService;
+        this.companyIntelligenceService = companyIntelligenceService;
     }
 
     public void execute(String taskId) {
@@ -46,10 +50,17 @@ public class WorkflowOrchestrator {
                         "index:" + companySymbol + ":" + task.id(),
                         Map.of("companySymbol", companySymbol, "parentTaskId", task.id())
                 );
+                WorkflowTask intelligenceTask = WorkflowTask.created(
+                        WorkflowTaskType.COMPANY_INTELLIGENCE_BUILD,
+                        "intelligence:" + companySymbol + ":" + task.id(),
+                        Map.of("companySymbol", companySymbol, "parentTaskId", task.id())
+                );
                 taskRepository.save(metricTask);
                 taskRepository.save(indexTask);
+                taskRepository.save(intelligenceTask);
                 execute(metricTask.id());
                 execute(indexTask.id());
+                execute(intelligenceTask.id());
             }
             case WorkflowTaskType.FINANCIAL_METRIC_RECALCULATION -> {
                 WorkflowTask runningTask = task.running();
@@ -67,6 +78,17 @@ public class WorkflowOrchestrator {
                 try {
                     taskRepository.save(runningTask);
                     documentIndexingService.indexCompany(stringPayload(task.payload(), "companySymbol"));
+                    taskRepository.save(runningTask.succeeded());
+                } catch (RuntimeException ex) {
+                    taskRepository.save(runningTask.failed(ex.getMessage()));
+                    throw ex;
+                }
+            }
+            case WorkflowTaskType.COMPANY_INTELLIGENCE_BUILD -> {
+                WorkflowTask runningTask = task.running();
+                try {
+                    taskRepository.save(runningTask);
+                    companyIntelligenceService.rebuild(stringPayload(task.payload(), "companySymbol"));
                     taskRepository.save(runningTask.succeeded());
                 } catch (RuntimeException ex) {
                     taskRepository.save(runningTask.failed(ex.getMessage()));
