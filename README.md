@@ -62,6 +62,7 @@ Async workflow:
 POST /api/ingestion/demo/async
 GET /api/workflows
 GET /api/document-index/600519/search?q=现金流风险
+GET /api/metrics/600519/runs
 ```
 
 ## Database Stage
@@ -114,4 +115,27 @@ Useful endpoints:
 POST /api/document-index/600519/rebuild
 GET /api/document-index/600519/count
 GET /api/document-index/600519/search?q=现金流风险
+```
+
+## Metric Engine Stage
+
+The metric engine stage turns hard-coded ratios into a governed calculation pipeline:
+
+- `MetricDefinitionCatalog` defines source metrics, ratio metrics, year-over-year metrics, and derived spreads.
+- `CoreFinancialMetricCalculator` evaluates metrics in fiscal-year order and stores results with a plan version.
+- `MetricCalculationRun` records each calculation run with statement count, metric count, risk count, timestamps, and metadata.
+- `RiskRule` components evaluate financial risk signals from the metric map:
+  - cash earnings quality;
+  - receivable pressure;
+  - profitability trend weakening;
+  - leverage risk.
+
+Useful endpoints:
+
+```bash
+GET /api/metrics/definitions
+POST /api/metrics/recalculate/600519
+GET /api/metrics/600519
+GET /api/metrics/600519/risks
+GET /api/metrics/600519/runs
 ```

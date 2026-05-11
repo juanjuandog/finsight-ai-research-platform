@@ -14,3 +14,7 @@ curl -s "$BASE_URL/api/document-index/600519/search?q=%E7%8E%B0%E9%87%91%E6%B5%8
 echo
 curl -s "$BASE_URL/api/metrics/600519"
 echo
+curl -s "$BASE_URL/api/metrics/600519/risks"
+echo
+curl -s "$BASE_URL/api/metrics/600519/runs"
+echo
