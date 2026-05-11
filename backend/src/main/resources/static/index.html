@@ -10,11 +10,18 @@
   <header class="hero">
     <div class="hero-inner">
       <p class="kicker">FinSight AI Research Platform</p>
-      <h1>金融投研智能宇宙</h1>
-      <p class="subtitle">把公告、财报、研报与指标，整理成可检索、可追溯、可评估的公司知识资产。</p>
-      <div class="hero-actions">
-        <button id="runWorkflow">运行分析工作流</button>
+      <h1>动态股票智能分析</h1>
+      <p class="subtitle">输入股票代码，系统会自动接入公司数据、重算财务指标、构建文档证据、生成时间线与知识图谱。</p>
+      <div class="stock-console" aria-label="股票分析控制台">
+        <input id="symbolInput" value="600519" maxlength="16" aria-label="股票代码">
+        <button id="runWorkflow">分析股票</button>
         <button id="runEvaluation" class="ghost">执行 RAG 评估</button>
+      </div>
+      <div class="quick-symbols" aria-label="常用股票">
+        <button class="symbol-chip" data-symbol="600519">贵州茅台 600519</button>
+        <button class="symbol-chip" data-symbol="300750">宁德时代 300750</button>
+        <button class="symbol-chip" data-symbol="000001">平安银行 000001</button>
+        <button class="symbol-chip" data-symbol="002594">比亚迪 002594</button>
       </div>
     </div>
   </header>
@@ -31,17 +38,17 @@
   <main class="page">
     <section id="overview" class="profile-grid">
       <aside class="profile-card paper">
-        <div class="avatar">F</div>
-        <h2>贵州茅台</h2>
-        <p>股票代码 600519</p>
-        <p>示例公司画像，用于展示多源数据接入、财务指标计算、混合检索与投研知识图谱。</p>
+        <div class="avatar" id="companyAvatar">F</div>
+        <h2 id="companyName">贵州茅台</h2>
+        <p id="companyMeta">股票代码 600519</p>
+        <p id="companyDescription">输入股票代码后，系统会围绕该公司生成财务指标、风险信号、研报证据和知识图谱。</p>
       </aside>
 
       <section class="paper intro-card">
-        <h2>项目总览</h2>
+        <h2>动态分析面板</h2>
         <div class="rule"></div>
-        <p>这是一个面向金融投研场景的 AI 后端平台。系统会先接入公司财报与文档，再通过异步工作流触发指标计算、文档索引、事件抽取与知识图谱构建。</p>
-        <p>回答问题时，系统会先理解查询意图，再从结构化指标库、文档 chunk、风险信号和时间线中召回证据，最后生成带来源的分析结果。</p>
+        <p>这是一个面向股票研究的 AI 后端平台。每次分析都会以股票代码为主键，触发数据接入、指标 DAG 计算、文档索引、事件抽取和知识图谱重建。</p>
+        <p>你可以切换不同股票，观察同一套后端管线如何为不同公司生成可检索、可追溯、可评估的投研结果。</p>
         <div class="stats">
           <article>
             <span>工作流任务</span>

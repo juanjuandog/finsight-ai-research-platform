@@ -2,6 +2,7 @@ package com.finsight.api;
 
 import com.finsight.application.IngestionApplicationService;
 import com.finsight.domain.FinancialDataIngestionTemplate;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,8 +21,18 @@ public class IngestionController {
         return ingestionApplicationService.ingestDemoCompany();
     }
 
+    @PostMapping("/{companySymbol}")
+    public FinancialDataIngestionTemplate.IngestionResult ingestCompany(@PathVariable String companySymbol) {
+        return ingestionApplicationService.ingestCompany(companySymbol);
+    }
+
     @PostMapping("/demo/async")
     public IngestionApplicationService.WorkflowSubmission ingestDemoAsync() {
         return ingestionApplicationService.submitDemoCompanyIngestion();
+    }
+
+    @PostMapping("/{companySymbol}/async")
+    public IngestionApplicationService.WorkflowSubmission ingestCompanyAsync(@PathVariable String companySymbol) {
+        return ingestionApplicationService.submitCompanyIngestion(companySymbol);
     }
 }

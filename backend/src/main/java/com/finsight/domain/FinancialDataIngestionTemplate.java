@@ -63,6 +63,9 @@ public abstract class FinancialDataIngestionTemplate implements FinancialDataSou
             taskRepository.save(runningTask);
             List<Company> companies = fetchCompanies();
             companies.forEach(companyRepository::save);
+            if (companies.stream().noneMatch(company -> company.symbol().equals(companySymbol))) {
+                companyRepository.save(new Company(companySymbol, "股票 " + companySymbol, "CN", "综合"));
+            }
             List<FinancialDocument> documents = fetchDocuments(companySymbol);
             documents.stream().filter(this::isValidDocument).forEach(documentRepository::save);
             List<FinancialStatement> statements = fetchStatements(companySymbol);

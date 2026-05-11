@@ -23,14 +23,29 @@ public class IngestionApplicationService {
     }
 
     public FinancialDataIngestionTemplate.IngestionResult ingestDemoCompany() {
-        return dataSource.ingestCompany("600519");
+        return ingestCompany("600519");
+    }
+
+    public FinancialDataIngestionTemplate.IngestionResult ingestCompany(String companySymbol) {
+        return dataSource.ingestCompany(normalizeSymbol(companySymbol));
     }
 
     public WorkflowSubmission submitDemoCompanyIngestion() {
-        WorkflowTask task = dataSource.createIngestionTask("600519");
+        return submitCompanyIngestion("600519");
+    }
+
+    public WorkflowSubmission submitCompanyIngestion(String companySymbol) {
+        WorkflowTask task = dataSource.createIngestionTask(normalizeSymbol(companySymbol));
         workflowTaskPublisher.publish(task);
         WorkflowTask current = workflowTaskRepository.findById(task.id()).orElse(task);
         return new WorkflowSubmission(current.id(), current.taskType(), current.idempotencyKey(), current.status().name());
+    }
+
+    private String normalizeSymbol(String companySymbol) {
+        if (companySymbol == null || companySymbol.isBlank()) {
+            throw new IllegalArgumentException("companySymbol must not be blank");
+        }
+        return companySymbol.trim().toUpperCase();
     }
 
     public record WorkflowSubmission(

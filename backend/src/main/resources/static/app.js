@@ -1,4 +1,5 @@
-const symbol = "600519";
+let symbol = "600519";
+let companies = [];
 
 const $ = (id) => document.getElementById(id);
 
@@ -24,6 +25,9 @@ function escapeHtml(value) {
 }
 
 async function refresh() {
+  companies = await request("/api/companies").catch(() => companies);
+  updateCompanyCard();
+
   const [tasks, metrics, chunks, timeline, graph] = await Promise.all([
     request("/api/workflows"),
     request(`/api/metrics/${symbol}`),
@@ -37,9 +41,13 @@ async function refresh() {
   $("chunkCount").textContent = chunks.count;
   $("eventCount").textContent = timeline.length;
 
-  $("workflowList").innerHTML = tasks.slice(0, 8).map(task =>
+  const currentTasks = tasks
+    .filter(task => task.idempotencyKey.includes(symbol))
+    .slice(0, 8);
+
+  $("workflowList").innerHTML = currentTasks.map(task =>
     item(taskName(task.taskType), task.idempotencyKey, `${statusName(task.status)} · 第 ${task.attempts} 次执行`)
-  ).join("") || item("暂无工作流任务", "点击“运行分析工作流”后会自动生成任务链路。");
+  ).join("") || item("暂无工作流任务", "点击“分析股票”后会自动生成该股票的任务链路。");
 
   $("metricList").innerHTML = metricTable(metrics);
 
@@ -51,6 +59,17 @@ async function refresh() {
     item("实体节点", `${graph.entities.length} 个节点`, graph.entities.slice(0, 6).map(entity => entity.name).join(" · ")),
     item("关系边", `${graph.relations.length} 条关系`, graph.relations.slice(0, 6).map(relation => relationName(relation.relationType)).join(" · "))
   ].join("");
+}
+
+function updateCompanyCard() {
+  const company = companies.find(item => item.symbol === symbol);
+  const name = company?.name || `股票 ${symbol}`;
+  const industry = company?.industry || "待分析";
+  const exchange = company?.exchange || "CN";
+  $("companyAvatar").textContent = name.slice(0, 1).toUpperCase();
+  $("companyName").textContent = name;
+  $("companyMeta").textContent = `股票代码 ${symbol} · ${exchange} · ${industry}`;
+  $("companyDescription").textContent = `当前正在分析 ${name}。系统会围绕 ${industry} 行业特征，生成指标、证据、事件和图谱结果。`;
 }
 
 function metricTable(metrics) {
@@ -65,7 +84,10 @@ function metricTable(metrics) {
 async function runWorkflow() {
   $("runWorkflow").disabled = true;
   try {
-    await request("/api/ingestion/demo/async", { method: "POST" });
+    symbol = normalizeSymbol($("symbolInput").value);
+    $("symbolInput").value = symbol;
+    updateCompanyCard();
+    await request(`/api/ingestion/${encodeURIComponent(symbol)}/async`, { method: "POST" });
     await new Promise(resolve => setTimeout(resolve, 500));
     await refresh();
     await search();
@@ -101,10 +123,30 @@ async function runEvaluation() {
 $("runWorkflow").addEventListener("click", runWorkflow);
 $("runEvaluation").addEventListener("click", runEvaluation);
 $("searchButton").addEventListener("click", search);
+$("symbolInput").addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    runWorkflow();
+  }
+});
+
+document.querySelectorAll(".symbol-chip").forEach(button => {
+  button.addEventListener("click", () => {
+    $("symbolInput").value = button.dataset.symbol;
+    runWorkflow();
+  });
+});
 
 refresh().then(search).catch(error => {
   $("workflowList").innerHTML = item("后端服务未就绪", error.message);
 });
+
+function normalizeSymbol(value) {
+  const next = String(value || "").trim().toUpperCase();
+  if (!next) {
+    throw new Error("请输入股票代码");
+  }
+  return next;
+}
 
 function taskName(type) {
   return ({
