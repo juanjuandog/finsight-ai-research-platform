@@ -1,0 +1,9 @@
+server:
+  port: 8080
+
+spring:
+  flyway:
+    enabled: false
+
+finsight:
+  ai-service-url: http://localhost:8001

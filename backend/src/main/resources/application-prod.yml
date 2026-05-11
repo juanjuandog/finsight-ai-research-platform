@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/finsight
+    username: finsight
+    password: finsight
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+finsight:
+  redis-url: redis://localhost:6379
+  rabbitmq-url: amqp://finsight:finsight@localhost:5672
+  elasticsearch-url: http://localhost:9200
+  minio-url: http://localhost:9000
+  ai-service-url: http://localhost:8001

@@ -1,0 +1,7 @@
+backend/target/
+ai-service/.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+
