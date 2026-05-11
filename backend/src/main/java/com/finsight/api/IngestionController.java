@@ -19,5 +19,9 @@ public class IngestionController {
     public FinancialDataIngestionTemplate.IngestionResult ingestDemo() {
         return ingestionApplicationService.ingestDemoCompany();
     }
-}
 
+    @PostMapping("/demo/async")
+    public IngestionApplicationService.WorkflowSubmission ingestDemoAsync() {
+        return ingestionApplicationService.submitDemoCompanyIngestion();
+    }
+}

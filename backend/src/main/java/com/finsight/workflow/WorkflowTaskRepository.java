@@ -1,12 +1,16 @@
 package com.finsight.workflow;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface WorkflowTaskRepository {
     WorkflowTask save(WorkflowTask task);
 
     boolean existsByIdempotencyKey(String idempotencyKey);
 
+    Optional<WorkflowTask> findById(String id);
+
+    Optional<WorkflowTask> findByIdempotencyKey(String idempotencyKey);
+
     List<WorkflowTask> findAll();
 }
-

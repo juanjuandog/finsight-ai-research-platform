@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Repository
@@ -23,6 +24,18 @@ public class InMemoryWorkflowTaskRepository implements WorkflowTaskRepository {
     @Override
     public boolean existsByIdempotencyKey(String idempotencyKey) {
         return tasks.values().stream().anyMatch(task -> task.idempotencyKey().equals(idempotencyKey));
+    }
+
+    @Override
+    public Optional<WorkflowTask> findById(String id) {
+        return Optional.ofNullable(tasks.get(id));
+    }
+
+    @Override
+    public Optional<WorkflowTask> findByIdempotencyKey(String idempotencyKey) {
+        return tasks.values().stream()
+                .filter(task -> task.idempotencyKey().equals(idempotencyKey))
+                .findFirst();
     }
 
     @Override

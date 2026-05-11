@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 @Profile("postgres")
@@ -60,12 +61,34 @@ public class JdbcWorkflowTaskRepository implements WorkflowTaskRepository {
     }
 
     @Override
+    public Optional<WorkflowTask> findById(String id) {
+        return jdbcTemplate.query("""
+                SELECT id, task_type, idempotency_key, status, attempts, created_at, payload::text, error_message
+                FROM workflow_tasks
+                WHERE id = ?
+                """, this::mapTask, id).stream().findFirst();
+    }
+
+    @Override
+    public Optional<WorkflowTask> findByIdempotencyKey(String idempotencyKey) {
+        return jdbcTemplate.query("""
+                SELECT id, task_type, idempotency_key, status, attempts, created_at, payload::text, error_message
+                FROM workflow_tasks
+                WHERE idempotency_key = ?
+                """, this::mapTask, idempotencyKey).stream().findFirst();
+    }
+
+    @Override
     public List<WorkflowTask> findAll() {
         return jdbcTemplate.query("""
                 SELECT id, task_type, idempotency_key, status, attempts, created_at, payload::text, error_message
                 FROM workflow_tasks
                 ORDER BY created_at DESC
-                """, (rs, rowNum) -> new WorkflowTask(
+                """, this::mapTask);
+    }
+
+    private WorkflowTask mapTask(java.sql.ResultSet rs, int rowNum) throws java.sql.SQLException {
+        return new WorkflowTask(
                 rs.getString("id"),
                 rs.getString("task_type"),
                 rs.getString("idempotency_key"),
@@ -74,7 +97,6 @@ public class JdbcWorkflowTaskRepository implements WorkflowTaskRepository {
                 rs.getTimestamp("created_at").toInstant(),
                 jsonColumnMapper.objectMap(rs.getString("payload")),
                 rs.getString("error_message")
-        ));
+        );
     }
 }
-

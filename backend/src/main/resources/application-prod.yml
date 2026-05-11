@@ -7,6 +7,11 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: finsight
+    password: finsight
 
 finsight:
   redis-url: redis://localhost:6379

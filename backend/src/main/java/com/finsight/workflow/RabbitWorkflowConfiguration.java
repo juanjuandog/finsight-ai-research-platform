@@ -1,0 +1,86 @@
+package com.finsight.workflow;
+
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.amqp.rabbit.annotation.EnableRabbit;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+
+import java.util.Map;
+
+@Configuration
+@Profile("rabbitmq")
+@EnableRabbit
+@EnableConfigurationProperties(RabbitWorkflowProperties.class)
+public class RabbitWorkflowConfiguration {
+    @Bean
+    public DirectExchange workflowExchange(RabbitWorkflowProperties properties) {
+        return new DirectExchange(properties.exchange(), true, false);
+    }
+
+    @Bean
+    public DirectExchange workflowDeadLetterExchange(RabbitWorkflowProperties properties) {
+        return new DirectExchange(properties.deadLetterExchange(), true, false);
+    }
+
+    @Bean
+    public Queue ingestionQueue(RabbitWorkflowProperties properties) {
+        return new Queue(properties.ingestionQueue(), true, false, false, Map.of(
+                "x-dead-letter-exchange", properties.deadLetterExchange()
+        ));
+    }
+
+    @Bean
+    public Queue deadLetterQueue(RabbitWorkflowProperties properties) {
+        return new Queue(properties.deadLetterQueue(), true);
+    }
+
+    @Bean
+    public Binding ingestionBinding(Queue ingestionQueue, DirectExchange workflowExchange, RabbitWorkflowProperties properties) {
+        return BindingBuilder.bind(ingestionQueue).to(workflowExchange).with(properties.ingestionRoutingKey());
+    }
+
+    @Bean
+    public Binding deadLetterBinding(
+            Queue deadLetterQueue,
+            DirectExchange workflowDeadLetterExchange,
+            RabbitWorkflowProperties properties
+    ) {
+        return BindingBuilder.bind(deadLetterQueue).to(workflowDeadLetterExchange).with(properties.ingestionRoutingKey());
+    }
+
+    @Bean
+    public MessageConverter workflowMessageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory, MessageConverter workflowMessageConverter) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(workflowMessageConverter);
+        return template;
+    }
+
+    @Bean
+    public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
+            ConnectionFactory connectionFactory,
+            MessageConverter workflowMessageConverter
+    ) {
+        SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
+        factory.setConnectionFactory(connectionFactory);
+        factory.setMessageConverter(workflowMessageConverter);
+        factory.setDefaultRequeueRejected(false);
+        factory.setConcurrentConsumers(1);
+        factory.setMaxConcurrentConsumers(4);
+        return factory;
+    }
+}

@@ -33,6 +33,12 @@ cd backend
 mvn spring-boot:run -Dspring-boot.run.profiles=postgres,prod
 ```
 
+Backend with PostgreSQL + RabbitMQ workflow:
+
+```bash
+./scripts/run-backend-workflow.sh
+```
+
 AI service:
 
 ```bash
@@ -49,6 +55,13 @@ uvicorn app.main:app --reload --port 8001
 2. `POST /api/metrics/recalculate/600519` calculates financial indicators and risk signals.
 3. `POST /api/analysis/ask` asks a source-grounded question.
 
+Async workflow:
+
+```bash
+POST /api/ingestion/demo/async
+GET /api/workflows
+```
+
 ## Database Stage
 
 The PostgreSQL implementation is enabled by `postgres,prod` profiles. Flyway creates the core schema:
@@ -63,3 +76,21 @@ The PostgreSQL implementation is enabled by `postgres,prod` profiles. Flyway cre
 - `rag_traces`
 
 Default profile still uses in-memory repositories so the backend remains easy to run without Docker.
+
+## Workflow Stage
+
+The workflow stage splits long financial data processing into task lifecycle and execution:
+
+- `WorkflowTask` stores idempotency key, status, attempt count, payload, and error message.
+- `WorkflowTaskPublisher` has two implementations:
+  - default direct publisher for local development;
+  - RabbitMQ publisher enabled by `rabbitmq` profile.
+- `WorkflowOrchestrator` executes task types and links ingestion to metric recalculation.
+- `RabbitWorkflowListener` consumes messages and moves failed messages to a dead-letter queue when RabbitMQ rejects them.
+
+Run:
+
+```bash
+./scripts/run-backend-workflow.sh
+./scripts/demo-workflow.sh
+```

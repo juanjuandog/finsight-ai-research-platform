@@ -4,6 +4,16 @@ server:
 spring:
   flyway:
     enabled: false
+  rabbitmq:
+    listener:
+      simple:
+        default-requeue-rejected: false
 
 finsight:
   ai-service-url: http://localhost:8001
+  workflow:
+    exchange: finsight.workflow.exchange
+    ingestion-queue: finsight.workflow.ingestion
+    ingestion-routing-key: workflow.ingestion
+    dead-letter-exchange: finsight.workflow.dlx
+    dead-letter-queue: finsight.workflow.dead-letter

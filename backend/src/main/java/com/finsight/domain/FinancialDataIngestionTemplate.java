@@ -8,6 +8,7 @@ import com.finsight.domain.repository.DocumentRepository;
 import com.finsight.domain.repository.FinancialStatementRepository;
 import com.finsight.workflow.WorkflowTask;
 import com.finsight.workflow.WorkflowTaskRepository;
+import com.finsight.workflow.WorkflowTaskType;
 
 import java.util.List;
 import java.util.Map;
@@ -37,23 +38,39 @@ public abstract class FinancialDataIngestionTemplate implements FinancialDataSou
         }
 
         WorkflowTask task = taskRepository.save(WorkflowTask.created(
-                "FINANCIAL_DATA_INGESTION",
+                WorkflowTaskType.FINANCIAL_DATA_INGESTION,
                 idempotencyKey,
                 Map.of("source", sourceName(), "companySymbol", companySymbol)
         ));
 
+        return executeIngestionTask(task);
+    }
+
+    public WorkflowTask createIngestionTask(String companySymbol) {
+        String idempotencyKey = sourceName() + ":" + companySymbol;
+        return taskRepository.findByIdempotencyKey(idempotencyKey)
+                .orElseGet(() -> taskRepository.save(WorkflowTask.created(
+                        WorkflowTaskType.FINANCIAL_DATA_INGESTION,
+                        idempotencyKey,
+                        Map.of("source", sourceName(), "companySymbol", companySymbol)
+                )));
+    }
+
+    public IngestionResult executeIngestionTask(WorkflowTask task) {
+        String companySymbol = String.valueOf(task.payload().get("companySymbol"));
+        WorkflowTask runningTask = task.running();
         try {
-            taskRepository.save(task.running());
+            taskRepository.save(runningTask);
             List<Company> companies = fetchCompanies();
             companies.forEach(companyRepository::save);
             List<FinancialDocument> documents = fetchDocuments(companySymbol);
             documents.stream().filter(this::isValidDocument).forEach(documentRepository::save);
             List<FinancialStatement> statements = fetchStatements(companySymbol);
             statements.forEach(statementRepository::save);
-            taskRepository.save(task.succeeded());
+            taskRepository.save(runningTask.succeeded());
             return new IngestionResult(sourceName(), companySymbol, documents.size(), statements.size(), false);
         } catch (RuntimeException ex) {
-            taskRepository.save(task.failed(ex.getMessage()));
+            taskRepository.save(runningTask.failed(ex.getMessage()));
             throw ex;
         }
     }
@@ -74,4 +91,3 @@ public abstract class FinancialDataIngestionTemplate implements FinancialDataSou
     ) {
     }
 }
-
