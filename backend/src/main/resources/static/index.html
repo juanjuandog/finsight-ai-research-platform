@@ -1,107 +1,117 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FinSight AI</title>
+  <title>FinSight 金融智能宇宙</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <aside class="sidebar">
-    <div>
-      <p class="eyebrow">FinSight AI</p>
-      <h1>Financial research intelligence console</h1>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="kicker">FinSight AI Research Platform</p>
+      <h1>金融投研智能宇宙</h1>
+      <p class="subtitle">把公告、财报、研报与指标，整理成可检索、可追溯、可评估的公司知识资产。</p>
+      <div class="hero-actions">
+        <button id="runWorkflow">运行分析工作流</button>
+        <button id="runEvaluation" class="ghost">执行 RAG 评估</button>
+      </div>
     </div>
-    <nav>
-      <a href="#overview">Overview</a>
-      <a href="#workflow">Workflow</a>
-      <a href="#metrics">Metrics</a>
-      <a href="#retrieval">Retrieval</a>
-      <a href="#intelligence">Timeline & Graph</a>
-      <a href="#evaluation">Evaluation</a>
-    </nav>
-  </aside>
+  </header>
 
-  <main>
-    <section id="overview" class="toolbar">
-      <div>
-        <p class="eyebrow">Demo company</p>
-        <h2>600519 · Guizhou Moutai</h2>
-      </div>
-      <div class="actions">
-        <button id="runWorkflow">Run workflow</button>
-        <button id="runEvaluation">Run RAG evaluation</button>
-      </div>
+  <nav class="nav">
+    <a href="#overview">总览</a>
+    <a href="#workflow">工作流</a>
+    <a href="#metrics">指标引擎</a>
+    <a href="#retrieval">证据检索</a>
+    <a href="#intelligence">时间线与图谱</a>
+    <a href="#evaluation">评估</a>
+  </nav>
+
+  <main class="page">
+    <section id="overview" class="profile-grid">
+      <aside class="profile-card paper">
+        <div class="avatar">F</div>
+        <h2>贵州茅台</h2>
+        <p>股票代码 600519</p>
+        <p>示例公司画像，用于展示多源数据接入、财务指标计算、混合检索与投研知识图谱。</p>
+      </aside>
+
+      <section class="paper intro-card">
+        <h2>项目总览</h2>
+        <div class="rule"></div>
+        <p>这是一个面向金融投研场景的 AI 后端平台。系统会先接入公司财报与文档，再通过异步工作流触发指标计算、文档索引、事件抽取与知识图谱构建。</p>
+        <p>回答问题时，系统会先理解查询意图，再从结构化指标库、文档 chunk、风险信号和时间线中召回证据，最后生成带来源的分析结果。</p>
+        <div class="stats">
+          <article>
+            <span>工作流任务</span>
+            <strong id="taskCount">-</strong>
+          </article>
+          <article>
+            <span>指标数量</span>
+            <strong id="metricCount">-</strong>
+          </article>
+          <article>
+            <span>文档切片</span>
+            <strong id="chunkCount">-</strong>
+          </article>
+          <article>
+            <span>时间线事件</span>
+            <strong id="eventCount">-</strong>
+          </article>
+        </div>
+      </section>
     </section>
 
-    <section class="grid stats">
-      <article>
-        <span>Workflow tasks</span>
-        <strong id="taskCount">-</strong>
-      </article>
-      <article>
-        <span>Metrics</span>
-        <strong id="metricCount">-</strong>
-      </article>
-      <article>
-        <span>Chunks</span>
-        <strong id="chunkCount">-</strong>
-      </article>
-      <article>
-        <span>Timeline events</span>
-        <strong id="eventCount">-</strong>
-      </article>
-    </section>
-
-    <section id="workflow" class="panel">
-      <div class="section-head">
-        <h2>Workflow</h2>
-        <span>Task state, idempotency, chained execution</span>
+    <section id="workflow" class="paper">
+      <div class="section-title">
+        <h2>工作流编排</h2>
+        <span>任务状态、幂等键、链式执行</span>
       </div>
       <div id="workflowList" class="list"></div>
     </section>
 
-    <section id="metrics" class="panel">
-      <div class="section-head">
-        <h2>Metric Engine</h2>
-        <span>Versioned DAG output</span>
+    <section id="metrics" class="paper">
+      <div class="section-title">
+        <h2>财务指标 DAG</h2>
+        <span>版本化公式与派生指标</span>
       </div>
       <div id="metricList" class="table"></div>
     </section>
 
-    <section id="retrieval" class="panel">
-      <div class="section-head">
-        <h2>Hybrid Retrieval</h2>
-        <span>Keyword + vector evidence chunks</span>
+    <section id="retrieval" class="paper">
+      <div class="section-title">
+        <h2>混合证据检索</h2>
+        <span>关键词检索 + 向量召回 + 来源绑定</span>
       </div>
       <div class="search-row">
-        <input id="searchInput" value="现金流风险" aria-label="Search query">
-        <button id="searchButton">Search</button>
+        <input id="searchInput" value="现金流风险" aria-label="检索问题">
+        <button id="searchButton" class="compact">检索证据</button>
       </div>
       <div id="retrievalList" class="list"></div>
     </section>
 
-    <section id="intelligence" class="grid two">
-      <article class="panel">
-        <div class="section-head">
-          <h2>Timeline</h2>
-          <span>Cross-document company state</span>
+    <section id="intelligence" class="split">
+      <article class="paper">
+        <div class="section-title">
+          <h2>公司时间线</h2>
+          <span>跨文档状态变化</span>
         </div>
         <div id="timelineList" class="list"></div>
       </article>
-      <article class="panel">
-        <div class="section-head">
-          <h2>Knowledge Graph</h2>
-          <span>Entities and relations</span>
+      <article class="paper">
+        <div class="section-title">
+          <h2>轻量知识图谱</h2>
+          <span>实体与关系建模</span>
         </div>
         <div id="graphList" class="list"></div>
       </article>
     </section>
 
-    <section id="evaluation" class="panel">
-      <div class="section-head">
-        <h2>RAG Evaluation</h2>
-        <span>Evidence, answer, citation, latency</span>
+    <section id="evaluation" class="paper">
+      <div class="section-title">
+        <h2>RAG 质量评估</h2>
+        <span>证据覆盖、答案覆盖、引用与延迟</span>
       </div>
       <div id="evaluationSummary" class="summary"></div>
       <div id="evaluationList" class="list"></div>
@@ -111,4 +121,3 @@
   <script src="/app.js"></script>
 </body>
 </html>
-
