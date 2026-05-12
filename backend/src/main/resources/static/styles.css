@@ -196,20 +196,19 @@ button:disabled {
 }
 
 .avatar {
-  width: 126px;
-  height: 126px;
-  display: block;
+  width: 98px;
+  height: 98px;
+  display: grid;
+  place-items: center;
   margin: 8px auto 20px;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background:
-    linear-gradient(rgba(47, 41, 36, .025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(47, 41, 36, .02) 1px, transparent 1px),
-    #fbf7ef;
-  background-size: 28px 28px, 28px 28px, auto;
-  object-fit: contain;
-  padding: 14px;
-  box-shadow: 0 14px 34px rgba(93, 51, 32, .10);
+  border-radius: 50%;
+  border: 6px solid #e7ded0;
+  background: #15110e;
+  color: #f4dcae;
+  font-family: Georgia, "Songti SC", serif;
+  font-size: 48px;
+  font-weight: 800;
+  box-shadow: 0 14px 34px rgba(93, 51, 32, .12);
 }
 
 .profile-card h2,
