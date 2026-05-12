@@ -196,15 +196,20 @@ button:disabled {
 }
 
 .avatar {
-  width: 98px;
-  height: 98px;
+  width: 126px;
+  height: 126px;
   display: block;
   margin: 8px auto 20px;
-  border-radius: 50%;
-  border: 6px solid #e7ded0;
-  background: #fffdf8;
-  object-fit: cover;
-  box-shadow: 0 14px 34px rgba(93, 51, 32, .12);
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(rgba(47, 41, 36, .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 41, 36, .02) 1px, transparent 1px),
+    #fbf7ef;
+  background-size: 28px 28px, 28px 28px, auto;
+  object-fit: contain;
+  padding: 14px;
+  box-shadow: 0 14px 34px rgba(93, 51, 32, .10);
 }
 
 .profile-card h2,
