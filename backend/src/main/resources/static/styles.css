@@ -204,18 +204,14 @@ button:disabled {
   margin: 0 auto 42px;
   border-radius: 34px;
   border: 2px solid var(--line);
-  background:
-    linear-gradient(rgba(47, 41, 36, .025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(47, 41, 36, .02) 1px, transparent 1px),
-    #fbf7ef;
-  background-size: 54px 54px, 54px 54px, auto;
+  background: linear-gradient(180deg, #fffdf8 0%, #f8f0df 100%);
   color: var(--ink);
   font-family: "Songti SC", "Noto Serif CJK SC", "STSong", Georgia, serif;
-  font-size: 76px;
+  font-size: 118px;
   font-weight: 800;
-  line-height: 1;
-  padding-top: 10px;
-  box-shadow: 0 22px 48px rgba(93, 51, 32, .10);
+  line-height: .86;
+  padding-top: 8px;
+  box-shadow: 0 24px 52px rgba(93, 51, 32, .12);
 }
 
 .profile-card h2 {
