@@ -198,8 +198,9 @@ button:disabled {
 .avatar {
   width: 220px;
   height: 220px;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin: 0 auto 42px;
   border-radius: 34px;
   border: 2px solid var(--line);
@@ -210,9 +211,10 @@ button:disabled {
   background-size: 54px 54px, 54px 54px, auto;
   color: var(--ink);
   font-family: "Songti SC", "Noto Serif CJK SC", "STSong", Georgia, serif;
-  font-size: 36px;
+  font-size: 76px;
   font-weight: 800;
   line-height: 1;
+  padding-top: 10px;
   box-shadow: 0 22px 48px rgba(93, 51, 32, .10);
 }
 
