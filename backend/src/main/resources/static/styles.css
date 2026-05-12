@@ -196,22 +196,32 @@ button:disabled {
 }
 
 .avatar {
-  width: 98px;
-  height: 98px;
+  width: 220px;
+  height: 220px;
   display: grid;
   place-items: center;
-  margin: 8px auto 20px;
-  border-radius: 50%;
-  border: 6px solid #e7ded0;
-  background: #15110e;
-  color: #f4dcae;
-  font-family: Georgia, "Songti SC", serif;
-  font-size: 48px;
+  margin: 0 auto 42px;
+  border-radius: 34px;
+  border: 2px solid var(--line);
+  background:
+    linear-gradient(rgba(47, 41, 36, .025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(47, 41, 36, .02) 1px, transparent 1px),
+    #fbf7ef;
+  background-size: 54px 54px, 54px 54px, auto;
+  color: var(--ink);
+  font-family: "Songti SC", "Noto Serif CJK SC", "STSong", Georgia, serif;
+  font-size: 36px;
   font-weight: 800;
-  box-shadow: 0 14px 34px rgba(93, 51, 32, .12);
+  line-height: 1;
+  box-shadow: 0 22px 48px rgba(93, 51, 32, .10);
 }
 
-.profile-card h2,
+.profile-card h2 {
+  margin: 0;
+  font-size: 54px;
+  line-height: 1.1;
+}
+
 .intro-card h2,
 .section-title h2 {
   margin: 0;
