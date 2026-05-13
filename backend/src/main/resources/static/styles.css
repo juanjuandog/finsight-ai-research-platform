@@ -1429,3 +1429,18 @@ h1 {
     border-top: 0;
   }
 }
+
+/* Prevent dark navigation and stock pool panels from covering lower content while scrolling. */
+.terminal-topbar {
+  position: static;
+}
+
+.left-rail {
+  position: static;
+  align-self: start;
+}
+
+.right-rail {
+  position: static;
+  align-self: start;
+}
