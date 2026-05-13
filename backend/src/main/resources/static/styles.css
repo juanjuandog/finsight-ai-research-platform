@@ -1444,3 +1444,308 @@ h1 {
   position: static;
   align-self: start;
 }
+
+/* Decision-chain workspace: reduce capability sprawl and keep first screen focused. */
+.terminal-topbar {
+  position: static;
+  min-height: 66px;
+}
+
+.terminal-shell {
+  grid-template-columns: 286px minmax(680px, 1fr) 302px;
+  gap: 14px;
+  padding: 14px;
+}
+
+.left-rail {
+  gap: 0;
+  align-self: start;
+}
+
+.left-rail .panel {
+  padding: 18px 16px;
+}
+
+.stock-list {
+  max-height: calc(100vh - 190px);
+}
+
+.workspace {
+  gap: 14px;
+}
+
+.decision-stage {
+  display: grid;
+  grid-template-columns: minmax(0, .82fr) minmax(430px, 1.18fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.decision-stage .panel {
+  min-height: 270px;
+}
+
+.market-header {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 18px;
+  padding: 22px;
+}
+
+.market-summary {
+  grid-template-columns: 1fr;
+}
+
+.summary-price {
+  max-width: 260px;
+}
+
+.summary-facts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.summary-facts article,
+.summary-facts article:first-child {
+  border-left: 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.summary-facts article:nth-child(1),
+.summary-facts article:nth-child(2) {
+  border-top: 0;
+}
+
+.summary-facts article:nth-child(even) {
+  border-left: 1px solid var(--line-soft);
+}
+
+.decision-card {
+  display: grid;
+  align-content: start;
+}
+
+.decision-card .section-title {
+  align-items: center;
+}
+
+.rating-stack {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.rating-stack strong {
+  color: var(--ink-strong);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.decision-card .conclusion {
+  margin-bottom: 18px;
+  color: var(--ink-strong);
+  font-size: 18px;
+  line-height: 1.65;
+  font-weight: 650;
+}
+
+.decision-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.decision-grid article {
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  padding: 14px;
+}
+
+.decision-grid span {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--primary-hover);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.decision-list ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.decision-list li,
+.decision-list p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.compact-chart {
+  padding-bottom: 14px;
+}
+
+.compact-chart .chart-wrap {
+  min-height: 320px;
+}
+
+#priceChart {
+  height: 320px;
+}
+
+.chart-stats {
+  display: none;
+}
+
+.health-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.health-card {
+  min-height: 96px;
+  gap: 7px;
+  padding: 12px;
+}
+
+.health-card strong {
+  font-size: 19px;
+}
+
+.health-card p,
+.health-card small {
+  display: none;
+}
+
+.right-rail {
+  gap: 14px;
+}
+
+.signal-item {
+  grid-template-columns: 1fr;
+  padding: 9px 10px;
+}
+
+.signal-item div {
+  align-items: center;
+}
+
+.signal-item em {
+  min-width: 34px;
+  text-align: center;
+}
+
+.evidence-preview {
+  display: grid;
+  gap: 9px;
+}
+
+.evidence-preview p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.evidence-mini {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: var(--panel-soft);
+  padding: 10px;
+}
+
+.evidence-mini strong {
+  color: var(--ink-strong);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.evidence-mini p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.evidence-mini span {
+  color: var(--muted-soft);
+  font-size: 11px;
+}
+
+.text-link {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  padding: 0;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.text-link:hover {
+  background: transparent;
+  color: var(--primary-hover);
+}
+
+.quality-collapsible {
+  display: grid;
+  gap: 10px;
+}
+
+.quality-collapsible summary {
+  display: grid;
+  gap: 5px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.quality-collapsible summary::-webkit-details-marker {
+  display: none;
+}
+
+.quality-collapsible summary span {
+  color: var(--ink-strong);
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.quality-collapsible summary strong {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.quality-collapsible[open] summary {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+#evidence {
+  scroll-margin-top: 18px;
+}
+
+@media (max-width: 1480px) {
+  .terminal-shell {
+    grid-template-columns: 270px minmax(0, 1fr);
+  }
+
+  .right-rail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .quality-collapsible {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1180px) {
+  .decision-stage,
+  .decision-grid,
+  .health-grid {
+    grid-template-columns: 1fr;
+  }
+}

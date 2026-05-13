@@ -135,6 +135,7 @@ function renderQuote(quote) {
 
 function renderDataStatus(status, quote, aiAnalysis) {
   if (!status) {
+    $("dataQualitySummary").textContent = "数据可信度待确认";
     $("dataQualityPanel").innerHTML = `<div class="empty-note">数据质量暂不可用，等待后端状态接口返回。</div>`;
     return;
   }
@@ -151,6 +152,10 @@ function renderDataStatus(status, quote, aiAnalysis) {
     ["报告时间", Number(status.aiReportCount || 0) > 0 ? `${Number(status.aiReportCount || 0)} 份 / ${aiTime}` : "暂无报告", Number(status.aiReportCount || 0) > 0 ? "good" : "watch"],
     ["工作流", workflow, workflow === "SUCCEEDED" ? "good" : workflow === "FAILED" ? "risk" : "watch"]
   ];
+  const qualityGrade = Number(status.chunkCount || 0) > 0 && Number(status.metricRunCount || 0) > 0
+    ? (status.quoteRealtime ? "A-" : "B+")
+    : "B";
+  $("dataQualitySummary").textContent = `数据可信度 ${qualityGrade} / ${status.quoteRealtime ? "行情实时" : "行情降级"} / ${aiAnalysis?.aiGenerated ? "模型输出" : "规则兜底"}`;
   $("dataQualityPanel").innerHTML = qualities.map(([label, value, level]) => qualityItem(label, value, level)).join("")
     + (status.latestWorkflowError ? `<div class="empty-note">${escapeHtml(status.latestWorkflowError)}</div>` : "");
 }
@@ -167,8 +172,8 @@ function renderReportMeta(aiAnalysis, status, metrics, risks, quote) {
     <p>${escapeHtml(aiAnalysis.summary || "AI 已生成结构化观点，但摘要内容暂为空。")}</p>
     <dl class="brief-facts">
       <div><dt>置信度</dt><dd>${escapeHtml(confidence)}</dd></div>
-      <div><dt>核心原因</dt><dd>${escapeHtml(formatPoints(aiAnalysis.positivePoints) || "等待更多财务指标与公告证据。")}</dd></div>
-      <div><dt>模型来源</dt><dd>${escapeHtml(aiAnalysis.aiGenerated ? "Ollama 本地模型" : "规则兜底")}</dd></div>
+      <div><dt>当前建议</dt><dd>${escapeHtml(recommendationText(rating))}</dd></div>
+      <div><dt>核心原因</dt><dd>${escapeHtml(firstPoint(aiAnalysis.positivePoints) || "等待更多财务指标与公告证据。")}</dd></div>
     </dl>
   ` : `
     <div class="brief-rating pending">
@@ -187,15 +192,12 @@ function renderAnalysis(metrics, risks, quote, aiAnalysis = null) {
     const displayRating = aiAnalysis?.rating || "等待分析";
     $("ratingBadge").textContent = displayRating;
     $("ratingBadge").className = `rating ${ratingClass(displayRating)}`;
-    $("analysisConclusion").textContent = aiAnalysis?.summary || "点击“生成 AI 研报”后，系统会生成财务指标、风险信号和证据来源。";
-    $("positivePoints").textContent = formatPoints(aiAnalysis?.positivePoints) || "暂无分析结果。";
-    $("negativePoints").textContent = formatPoints(aiAnalysis?.riskPoints) || "暂无分析结果。";
+    $("analysisConclusion").textContent = aiAnalysis?.summary || "点击“生成 AI 研报”后，系统会回答这只股票能不能看、为什么、风险在哪里、证据来自哪里。";
+    $("positivePoints").innerHTML = decisionList(aiAnalysis?.positivePoints, "暂无核心理由。");
+    $("negativePoints").innerHTML = decisionList(aiAnalysis?.riskPoints, "暂无主要风险。");
     $("confidenceScore").textContent = aiAnalysis?.confidence != null ? `${aiAnalysis.confidence}%` : "--";
     $("analysisUpdatedAt").textContent = aiAnalysis ? analysisMeta(aiAnalysis) : "暂无数据";
     $("healthList").innerHTML = emptyHealth();
-    $("riskList").innerHTML = aiAnalysis
-      ? riskItemsFromAi(aiAnalysis)
-      : item("暂无风险信号", "请先生成 AI 研报，系统会根据财务指标和文本证据识别风险。");
     return;
   }
 
@@ -210,12 +212,11 @@ function renderAnalysis(metrics, risks, quote, aiAnalysis = null) {
   $("ratingBadge").textContent = displayRating;
   $("ratingBadge").className = `rating ${ratingClass(displayRating)}`;
   $("analysisConclusion").textContent = aiAnalysis?.summary || conclusionText(company, rating, checks, risks, quote);
-  $("positivePoints").textContent = formatPoints(aiAnalysis?.positivePoints) || positiveText(checks);
-  $("negativePoints").textContent = formatPoints(aiAnalysis?.riskPoints) || negativeText(checks, risks, quote);
+  $("positivePoints").innerHTML = decisionList(aiAnalysis?.positivePoints, positiveText(checks));
+  $("negativePoints").innerHTML = decisionList(aiAnalysis?.riskPoints, negativeText(checks, risks, quote));
   $("confidenceScore").textContent = `${displayConfidence}%`;
   $("analysisUpdatedAt").textContent = aiAnalysis ? analysisMeta(aiAnalysis) : quote?.tradeDate && quote?.tradeTime ? `${quote.tradeDate} ${quote.tradeTime}` : "基于当前数据";
   $("healthList").innerHTML = checks.map(healthCard).join("");
-  $("riskList").innerHTML = riskItems(risks, checks, quote);
 }
 
 function renderChart(candles, quote, aiAnalysis) {
@@ -225,7 +226,7 @@ function renderChart(candles, quote, aiAnalysis) {
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
   const width = Math.max(320, Math.floor(rect.width));
-  const height = 430;
+  const height = 320;
   canvas.width = Math.floor(width * dpr);
   canvas.height = Math.floor(height * dpr);
   canvas.style.height = `${height}px`;
@@ -455,14 +456,46 @@ function formatPoints(points) {
   return points.slice(0, 4).join("；") + "。";
 }
 
+function splitPoints(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean).slice(0, 3);
+  }
+  return String(value || "")
+    .replaceAll("。", "；")
+    .split("；")
+    .map(item => item.trim())
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function decisionList(points, fallback) {
+  const rows = splitPoints(points || fallback);
+  return rows.length
+    ? `<ol>${rows.map(point => `<li>${escapeHtml(point)}</li>`).join("")}</ol>`
+    : `<p>${escapeHtml(fallback)}</p>`;
+}
+
+function firstPoint(points) {
+  return splitPoints(points)[0] || "";
+}
+
+function recommendationText(rating) {
+  if (rating === "积极") {
+    return "可进入重点跟踪，继续验证估值安全边际。";
+  }
+  if (rating === "谨慎") {
+    return "暂以观察为主，等待风险项改善或更强证据确认。";
+  }
+  return "维持中性观察，适合放入候选池持续跟踪。";
+}
+
 function healthChecks(metrics) {
   return [
     check("盈利能力", "ROE", metric(metrics, "ROE"), value => value >= 0.18, value => value >= 0.10, "ROE 代表净资产创造利润的效率。"),
     check("成长能力", "营收同比", metric(metrics, "REVENUE_YOY"), value => value >= 0.10, value => value >= 0, "收入增长决定公司基本面的扩张速度。"),
     check("利润增长", "净利润同比", metric(metrics, "NET_PROFIT_YOY"), value => value >= 0.10, value => value >= 0, "净利润增长体现盈利弹性。"),
     check("现金流质量", "经营现金流/净利润", metric(metrics, "OCF_NET_PROFIT"), value => value >= 1, value => value >= 0.8, "现金流越接近或超过净利润，利润质量越稳。"),
-    check("杠杆水平", "资产负债率", metric(metrics, "DEBT_RATIO"), value => value <= 0.45, value => value <= 0.65, "负债率越高，财务安全边际越薄。", true),
-    check("回款压力", "应收增速-营收增速", metric(metrics, "RECEIVABLE_GROWTH_SPREAD"), value => value <= 0.03, value => value <= 0.12, "应收增速明显高于收入增速时，需要关注回款压力。", true)
+    check("资产负债率", "资产负债率", metric(metrics, "DEBT_RATIO"), value => value <= 0.45, value => value <= 0.65, "负债率越高，财务安全边际越薄。", true)
   ];
 }
 
@@ -501,15 +534,13 @@ function healthCard(check) {
     <article class="health-card ${check.level}">
       <span>${escapeHtml(check.title)}</span>
       <strong>${escapeHtml(check.display)}</strong>
-      <p>${escapeHtml(check.label)} · ${escapeHtml(check.fiscalYear)}</p>
       <em>${statusName(check.level)}</em>
-      <small>${escapeHtml(check.help)}</small>
     </article>
   `;
 }
 
 function emptyHealth() {
-  return ["盈利能力", "成长能力", "利润增长", "现金流质量", "杠杆水平", "回款压力"]
+  return ["ROE", "营收同比", "净利润同比", "现金流质量", "资产负债率"]
     .map(title => `<article class="health-card empty"><span>${title}</span><strong>--</strong><p>等待分析</p><em>暂无数据</em></article>`)
     .join("");
 }
@@ -583,33 +614,26 @@ function riskSignalItems(risks, quote, aiAnalysis) {
   const volumeRatio = avgVolume > 0 && latest ? numeric(latest.volume) / avgVolume : 0;
   const changePercent = numeric(quote?.changePercent);
   const trendLevel = changePercent <= -3 ? "risk" : changePercent < 0 ? "watch" : "good";
-  const volumeLevel = volumeRatio >= 1.8 ? "watch" : volumeRatio > 0 ? "good" : "watch";
+  const liquidityLevel = volumeRatio >= 1.8 ? "watch" : volumeRatio > 0 ? "good" : "watch";
   const financialLevel = risks?.length ? "risk" : "good";
   const evidenceCount = Array.isArray(aiAnalysis?.citations) ? aiAnalysis.citations.length : 0;
   const newsLevel = evidenceCount ? "good" : "watch";
+  const valuationLevel = aiAnalysis?.rating === "积极" ? "watch" : "watch";
 
   return [
-    signalItem("趋势", trendLevel, changePercent < 0
-      ? `短期涨跌幅 ${formatSigned(changePercent)}%，价格动能偏弱。`
-      : `短期涨跌幅 ${formatSigned(changePercent)}%，趋势压力暂不突出。`),
-    signalItem("成交量", volumeLevel, volumeRatio > 0
-      ? `最新成交量约为近 20 日均量的 ${volumeRatio.toFixed(2)} 倍。`
-      : "历史成交量样本不足，等待行情数据补齐。"),
-    signalItem("财报", financialLevel, risks?.length
-      ? risks.slice(0, 2).map(risk => risk.title).join("；")
-      : "财务规则暂未触发高风险项，继续跟踪盈利和现金流质量。"),
-    signalItem("新闻", newsLevel, evidenceCount
-      ? `已引用 ${evidenceCount} 条公告/财报证据，新闻风险需结合后续舆情扩展。`
-      : "新闻与公告证据暂未充分覆盖，建议补充外部资讯源。")
+    signalItem("趋势风险", trendLevel),
+    signalItem("估值风险", valuationLevel),
+    signalItem("流动性风险", liquidityLevel),
+    signalItem("财务风险", financialLevel),
+    signalItem("舆情风险", newsLevel)
   ];
 }
 
-function signalItem(label, level, text) {
-  const levelName = ({ good: "稳定", watch: "关注", risk: "风险" })[level] || "关注";
+function signalItem(label, level) {
+  const levelName = ({ good: "低", watch: "中", risk: "高" })[level] || "中";
   return `
     <article class="signal-item ${level}">
       <div><span>${escapeHtml(label)}</span><em>${escapeHtml(levelName)}</em></div>
-      <p>${escapeHtml(text)}</p>
     </article>
   `;
 }
@@ -681,9 +705,17 @@ async function suggestStocks(query) {
 async function search() {
   const query = encodeURIComponent($("searchInput").value);
   const results = await request(`/api/document-index/${symbol}/search?q=${query}`).catch(() => []);
+  const visible = results.slice(0, 3);
   $("retrievalList").innerHTML = results.map(hit =>
     item(hit.title, hit.text, `${hit.section} · 相关度 ${Number(hit.score).toFixed(2)}`)
   ).join("") || item("暂无证据", "点击生成 AI 研报后，系统会建立该股票的公开财报和公告证据索引。");
+  $("evidencePreviewPanel").innerHTML = visible.map(hit => `
+    <article class="evidence-mini">
+      <strong>${escapeHtml(hit.title)}</strong>
+      <p>${escapeHtml(hit.text)}</p>
+      <span>${escapeHtml(hit.section)} · ${Number(hit.score).toFixed(2)}</span>
+    </article>
+  `).join("") || `<p>暂无证据预览。生成 AI 研报后，这里会显示最相关的 3 条证据。</p>`;
 }
 
 async function selectSymbol(nextSymbol) {
@@ -783,9 +815,10 @@ function normalizeSymbol(value) {
 }
 
 $("runWorkflow").addEventListener("click", runWorkflow);
-$("syncUniverse").addEventListener("click", syncUniverse);
-$("batchAnalyze").addEventListener("click", batchAnalyze);
 $("searchButton").addEventListener("click", search);
+$("openEvidence").addEventListener("click", () => {
+  $("evidence").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 $("symbolInput").addEventListener("keydown", event => {
   if (event.key === "Enter") {
     runWorkflow();
@@ -794,9 +827,6 @@ $("symbolInput").addEventListener("keydown", event => {
 $("symbolInput").addEventListener("input", event => {
   clearTimeout(suggestionTimer);
   suggestionTimer = setTimeout(() => suggestStocks(event.target.value), 180);
-});
-document.querySelectorAll(".symbol-chip").forEach(button => {
-  button.addEventListener("click", () => selectSymbol(button.dataset.symbol));
 });
 document.querySelectorAll(".range-tab").forEach(button => {
   button.addEventListener("click", async () => {
