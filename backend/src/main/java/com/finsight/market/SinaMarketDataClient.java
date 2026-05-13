@@ -16,15 +16,20 @@ import java.time.LocalTime;
 
 @Component
 public class SinaMarketDataClient implements MarketDataClient {
+    private final ExchangeResolver exchangeResolver;
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(2))
             .build();
 
+    public SinaMarketDataClient(ExchangeResolver exchangeResolver) {
+        this.exchangeResolver = exchangeResolver;
+    }
+
     @Override
     public MarketQuote quote(String symbol) {
-        String normalized = normalizeSymbol(symbol);
-        String exchange = exchangeOf(normalized);
-        String marketSymbol = exchange.toLowerCase() + normalized;
+        String normalized = exchangeResolver.normalizeSymbol(symbol);
+        String exchange = exchangeResolver.exchangeOf(normalized);
+        String marketSymbol = exchangeResolver.sinaPrefix(normalized) + normalized;
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://hq.sinajs.cn/list=" + marketSymbol))
                 .timeout(Duration.ofSeconds(3))
@@ -86,20 +91,6 @@ public class SinaMarketDataClient implements MarketDataClient {
                 true,
                 "实时行情接入成功"
         );
-    }
-
-    private String normalizeSymbol(String symbol) {
-        if (symbol == null || symbol.isBlank()) {
-            throw new IllegalArgumentException("symbol must not be blank");
-        }
-        return symbol.trim().toUpperCase();
-    }
-
-    private String exchangeOf(String symbol) {
-        if (symbol.startsWith("6") || symbol.startsWith("9")) {
-            return "SH";
-        }
-        return "SZ";
     }
 
     private BigDecimal decimal(String value) {

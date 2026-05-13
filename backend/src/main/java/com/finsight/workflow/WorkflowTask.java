@@ -39,5 +39,12 @@ public record WorkflowTask(
         WorkflowStatus nextStatus = attempts >= 3 ? WorkflowStatus.DEAD_LETTER : WorkflowStatus.FAILED;
         return new WorkflowTask(id, taskType, idempotencyKey, nextStatus, attempts, createdAt, payload, message);
     }
-}
 
+    public WorkflowTask retrying() {
+        return new WorkflowTask(id, taskType, idempotencyKey, WorkflowStatus.RETRYING, attempts, createdAt, payload, null);
+    }
+
+    public boolean retryable() {
+        return status == WorkflowStatus.FAILED || status == WorkflowStatus.DEAD_LETTER;
+    }
+}

@@ -1,21 +1,38 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/finsight
-    username: finsight
-    password: finsight
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/finsight}
+    username: ${SPRING_DATASOURCE_USERNAME:finsight}
+    password: ${SPRING_DATASOURCE_PASSWORD:finsight}
     driver-class-name: org.postgresql.Driver
   flyway:
     enabled: true
     locations: classpath:db/migration
   rabbitmq:
-    host: localhost
-    port: 5672
-    username: finsight
-    password: finsight
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:finsight}
+    password: ${SPRING_RABBITMQ_PASSWORD:finsight}
+  data:
+    redis:
+      url: ${SPRING_DATA_REDIS_URL:redis://localhost:6379}
+      repositories:
+        enabled: false
+
+management:
+  health:
+    rabbit:
+      enabled: true
 
 finsight:
-  redis-url: redis://localhost:6379
-  rabbitmq-url: amqp://finsight:finsight@localhost:5672
-  elasticsearch-url: http://localhost:9200
-  minio-url: http://localhost:9000
-  ai-service-url: http://localhost:8001
+  redis-url: ${FINSIGHT_REDIS_URL:redis://localhost:6379}
+  rabbitmq-url: ${FINSIGHT_RABBITMQ_URL:amqp://finsight:finsight@localhost:5672}
+  elasticsearch-url: ${FINSIGHT_ELASTICSEARCH_URL:http://localhost:9200}
+  minio-url: ${FINSIGHT_MINIO_URL:http://localhost:9000}
+  ai-service-url: ${FINSIGHT_AI_SERVICE_URL:http://localhost:8001}
+  ai-service:
+    enabled: ${FINSIGHT_AI_SERVICE_ENABLED:true}
+  stock-universe:
+    free-provider-enabled: ${FINSIGHT_STOCK_UNIVERSE_FREE_PROVIDER_ENABLED:true}
+  scheduler:
+    enabled: ${FINSIGHT_SCHEDULER_ENABLED:false}
+    batch-limit: ${FINSIGHT_SCHEDULER_BATCH_LIMIT:20}

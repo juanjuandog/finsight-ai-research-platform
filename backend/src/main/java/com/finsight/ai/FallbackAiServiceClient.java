@@ -1,6 +1,7 @@
 package com.finsight.ai;
 
 import com.finsight.domain.model.EvidenceChunk;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
+@ConditionalOnProperty(name = "finsight.ai-service.enabled", havingValue = "false", matchIfMissing = true)
 public class FallbackAiServiceClient implements AiServiceClient {
     @Override
     public List<EvidenceChunk> rerank(String question, List<EvidenceChunk> candidates) {
@@ -33,4 +35,3 @@ public class FallbackAiServiceClient implements AiServiceClient {
                 + "。本系统仅做信息整理与风险提示，不构成投资建议。";
     }
 }
-

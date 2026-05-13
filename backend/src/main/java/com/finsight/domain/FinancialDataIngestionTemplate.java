@@ -10,6 +10,7 @@ import com.finsight.workflow.WorkflowTask;
 import com.finsight.workflow.WorkflowTaskRepository;
 import com.finsight.workflow.WorkflowTaskType;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +33,7 @@ public abstract class FinancialDataIngestionTemplate implements FinancialDataSou
     }
 
     public IngestionResult ingestCompany(String companySymbol) {
-        String idempotencyKey = sourceName() + ":" + companySymbol;
+        String idempotencyKey = ingestionIdempotencyKey(companySymbol);
         if (taskRepository.existsByIdempotencyKey(idempotencyKey)) {
             return new IngestionResult(sourceName(), companySymbol, 0, 0, true);
         }
@@ -47,7 +48,7 @@ public abstract class FinancialDataIngestionTemplate implements FinancialDataSou
     }
 
     public WorkflowTask createIngestionTask(String companySymbol) {
-        String idempotencyKey = sourceName() + ":" + companySymbol;
+        String idempotencyKey = ingestionIdempotencyKey(companySymbol);
         return taskRepository.findByIdempotencyKey(idempotencyKey)
                 .orElseGet(() -> taskRepository.save(WorkflowTask.created(
                         WorkflowTaskType.FINANCIAL_DATA_INGESTION,
@@ -63,7 +64,8 @@ public abstract class FinancialDataIngestionTemplate implements FinancialDataSou
             taskRepository.save(runningTask);
             List<Company> companies = fetchCompanies();
             companies.forEach(companyRepository::save);
-            if (companies.stream().noneMatch(company -> company.symbol().equals(companySymbol))) {
+            if (companies.stream().noneMatch(company -> company.symbol().equals(companySymbol))
+                    && companyRepository.findBySymbol(companySymbol).isEmpty()) {
                 companyRepository.save(new Company(companySymbol, "股票 " + companySymbol, "CN", "综合"));
             }
             List<FinancialDocument> documents = fetchDocuments(companySymbol);
@@ -83,6 +85,10 @@ public abstract class FinancialDataIngestionTemplate implements FinancialDataSou
                 && document.companySymbol() != null
                 && document.content() != null
                 && !document.content().isBlank();
+    }
+
+    private String ingestionIdempotencyKey(String companySymbol) {
+        return sourceName() + ":" + companySymbol + ":" + LocalDate.now();
     }
 
     public record IngestionResult(

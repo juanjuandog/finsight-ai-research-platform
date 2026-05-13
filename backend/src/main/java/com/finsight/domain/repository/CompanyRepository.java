@@ -11,5 +11,8 @@ public interface CompanyRepository {
     Optional<Company> findBySymbol(String symbol);
 
     List<Company> findAll();
-}
 
+    List<Company> search(String query, int limit);
+
+    long count();
+}

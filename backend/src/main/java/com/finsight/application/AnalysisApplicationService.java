@@ -8,6 +8,9 @@ import com.finsight.domain.model.RagTrace;
 import com.finsight.domain.repository.RagTraceRepository;
 import com.finsight.rag.EvidenceRetriever;
 import com.finsight.rag.QueryUnderstandingService;
+import io.micrometer.core.instrument.DistributionSummary;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -22,21 +25,25 @@ public class AnalysisApplicationService {
     private final EvidenceRetriever evidenceRetriever;
     private final AiServiceClient aiServiceClient;
     private final RagTraceRepository ragTraceRepository;
+    private final MeterRegistry meterRegistry;
 
     public AnalysisApplicationService(
             QueryUnderstandingService queryUnderstandingService,
             EvidenceRetriever evidenceRetriever,
             AiServiceClient aiServiceClient,
-            RagTraceRepository ragTraceRepository
+            RagTraceRepository ragTraceRepository,
+            MeterRegistry meterRegistry
     ) {
         this.queryUnderstandingService = queryUnderstandingService;
         this.evidenceRetriever = evidenceRetriever;
         this.aiServiceClient = aiServiceClient;
         this.ragTraceRepository = ragTraceRepository;
+        this.meterRegistry = meterRegistry;
     }
 
     public AnswerResponse ask(AskQuestionCommand command) {
         Instant startedAt = Instant.now();
+        Timer.Sample sample = Timer.start(meterRegistry);
         Map<String, Object> structuredQuery = queryUnderstandingService.parse(command);
         List<EvidenceChunk> candidates = evidenceRetriever.retrieve(command.question(), structuredQuery);
         List<EvidenceChunk> evidence = aiServiceClient.rerank(command.question(), candidates).stream()
@@ -52,6 +59,16 @@ public class AnalysisApplicationService {
                 Duration.between(startedAt, Instant.now()).toMillis()
         );
         ragTraceRepository.save(command.companySymbol(), command.question(), trace);
+        String intent = String.valueOf(structuredQuery.getOrDefault("intent", "UNKNOWN"));
+        sample.stop(Timer.builder("finsight.rag.ask.latency")
+                .description("End-to-end RAG ask latency")
+                .tag("intent", intent)
+                .register(meterRegistry));
+        DistributionSummary.builder("finsight.rag.evidence.count")
+                .description("Evidence chunks bound to an answer")
+                .tag("intent", intent)
+                .register(meterRegistry)
+                .record(evidence.size());
         return new AnswerResponse(answer, evidence, trace);
     }
 }

@@ -5,21 +5,33 @@ import com.finsight.domain.repository.CompanyRepository;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class MarketDataService {
     private final MarketDataClient marketDataClient;
+    private final EastmoneyMarketHistoryClient marketHistoryClient;
     private final CompanyRepository companyRepository;
+    private final ExchangeResolver exchangeResolver;
 
-    public MarketDataService(MarketDataClient marketDataClient, CompanyRepository companyRepository) {
+    public MarketDataService(
+            MarketDataClient marketDataClient,
+            EastmoneyMarketHistoryClient marketHistoryClient,
+            CompanyRepository companyRepository,
+            ExchangeResolver exchangeResolver
+    ) {
         this.marketDataClient = marketDataClient;
+        this.marketHistoryClient = marketHistoryClient;
         this.companyRepository = companyRepository;
+        this.exchangeResolver = exchangeResolver;
     }
 
     public MarketQuote quote(String symbol) {
-        String normalized = normalizeSymbol(symbol);
+        String normalized = exchangeResolver.normalizeSymbol(symbol);
         try {
             MarketQuote quote = marketDataClient.quote(normalized);
             companyRepository.save(new Company(
@@ -34,12 +46,26 @@ public class MarketDataService {
         }
     }
 
+    public List<MarketCandle> history(String symbol, int limit) {
+        String normalized = exchangeResolver.normalizeSymbol(symbol);
+        try {
+            List<MarketCandle> candles = marketHistoryClient.daily(normalized, limit);
+            if (!candles.isEmpty()) {
+                return candles;
+            }
+        } catch (RuntimeException ignored) {
+            // Historical chart should remain usable in offline demos.
+        }
+        return fallbackHistory(normalized, Math.min(Math.max(limit, 20), 260));
+    }
+
     private MarketQuote fallbackQuote(String symbol, String reason) {
         Company company = companyRepository.findBySymbol(symbol)
-                .orElse(new Company(symbol, "股票 " + symbol, exchangeOf(symbol), "待分类"));
+                .orElse(new Company(symbol, "股票 " + symbol, exchangeResolver.exchangeOf(symbol), "待分类"));
+        companyRepository.save(company);
         return new MarketQuote(
                 symbol,
-                company.exchange(),
+                company.exchange() == null || company.exchange().isBlank() ? exchangeResolver.exchangeOf(symbol) : company.exchange(),
                 company.name(),
                 BigDecimal.ZERO,
                 BigDecimal.ZERO,
@@ -56,17 +82,44 @@ public class MarketDataService {
         );
     }
 
-    private String normalizeSymbol(String symbol) {
-        if (symbol == null || symbol.isBlank()) {
-            throw new IllegalArgumentException("symbol must not be blank");
+    private List<MarketCandle> fallbackHistory(String symbol, int limit) {
+        BigDecimal base = quote(symbol).currentPrice();
+        if (base.compareTo(BigDecimal.ZERO) <= 0) {
+            base = BigDecimal.valueOf(80 + Math.abs(symbol.hashCode() % 120));
         }
-        return symbol.trim().toUpperCase();
-    }
-
-    private String exchangeOf(String symbol) {
-        if (symbol.startsWith("6") || symbol.startsWith("9")) {
-            return "SH";
+        List<MarketCandle> candles = new ArrayList<>();
+        LocalDate cursor = LocalDate.now().minusDays(limit + 30L);
+        BigDecimal previous = base.multiply(BigDecimal.valueOf(0.92));
+        while (candles.size() < limit) {
+            cursor = cursor.plusDays(1);
+            if (cursor.getDayOfWeek().getValue() >= 6) {
+                continue;
+            }
+            double wave = Math.sin(candles.size() / 7.0) * 0.012;
+            double drift = (candles.size() - limit / 2.0) / limit * 0.0009;
+            BigDecimal open = previous.multiply(BigDecimal.valueOf(1 + wave / 2)).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal close = previous.multiply(BigDecimal.valueOf(1 + wave + drift)).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal high = open.max(close).multiply(BigDecimal.valueOf(1.008)).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal low = open.min(close).multiply(BigDecimal.valueOf(0.992)).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal change = close.subtract(previous).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal changePercent = previous.compareTo(BigDecimal.ZERO) == 0
+                    ? BigDecimal.ZERO
+                    : change.multiply(BigDecimal.valueOf(100)).divide(previous, 2, RoundingMode.HALF_UP);
+            candles.add(new MarketCandle(
+                    cursor,
+                    open,
+                    close,
+                    high,
+                    low,
+                    18000L + candles.size() * 97L,
+                    close.multiply(BigDecimal.valueOf(18000L + candles.size() * 97L)).setScale(2, RoundingMode.HALF_UP),
+                    high.subtract(low).multiply(BigDecimal.valueOf(100)).divide(previous, 2, RoundingMode.HALF_UP),
+                    changePercent,
+                    change,
+                    BigDecimal.ZERO
+            ));
+            previous = close;
         }
-        return "SZ";
+        return candles;
     }
 }

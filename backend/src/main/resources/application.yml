@@ -1,7 +1,25 @@
 server:
   port: 8080
 
+management:
+  health:
+    rabbit:
+      enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+
 spring:
+  data:
+    redis:
+      repositories:
+        enabled: false
   flyway:
     enabled: false
   rabbitmq:
@@ -11,6 +29,20 @@ spring:
 
 finsight:
   ai-service-url: http://localhost:8001
+  ai-service:
+    enabled: false
+  cache:
+    analysis-ttl: PT6H
+  stock-universe:
+    free-provider-enabled: true
+  scheduler:
+    enabled: false
+    zone: Asia/Shanghai
+    stock-universe-cron: "0 20 8 * * MON-FRI"
+    batch-analysis-cron: "0 45 8 * * MON-FRI"
+    batch-limit: 20
+  embedding:
+    dimension: 384
   workflow:
     exchange: finsight.workflow.exchange
     ingestion-queue: finsight.workflow.ingestion

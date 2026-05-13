@@ -1,4 +1,54 @@
 services:
+  backend:
+    build:
+      context: ./backend
+    container_name: finsight-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ai-service:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres,rabbitmq,redis,prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/finsight
+      SPRING_DATASOURCE_USERNAME: finsight
+      SPRING_DATASOURCE_PASSWORD: finsight
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: finsight
+      SPRING_RABBITMQ_PASSWORD: finsight
+      SPRING_DATA_REDIS_URL: redis://redis:6379
+      FINSIGHT_AI_SERVICE_URL: http://ai-service:8001
+      FINSIGHT_AI_SERVICE_ENABLED: "true"
+      FINSIGHT_REDIS_URL: redis://redis:6379
+      FINSIGHT_SCHEDULER_ENABLED: ${FINSIGHT_SCHEDULER_ENABLED:-false}
+      FINSIGHT_ELASTICSEARCH_URL: http://elasticsearch:9200
+      FINSIGHT_MINIO_URL: http://minio:9000
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  ai-service:
+    build:
+      context: ./ai-service
+    container_name: finsight-ai-service
+    environment:
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:7b}
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health', timeout=2)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   postgres:
     image: pgvector/pgvector:pg16
     container_name: finsight-postgres
@@ -10,6 +60,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finsight -d finsight"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -26,6 +81,11 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: finsight
       RABBITMQ_DEFAULT_PASS: finsight
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
@@ -56,4 +116,3 @@ volumes:
   postgres_data:
   elasticsearch_data:
   minio_data:
-

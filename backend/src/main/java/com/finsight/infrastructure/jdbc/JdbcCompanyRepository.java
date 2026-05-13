@@ -59,5 +59,32 @@ public class JdbcCompanyRepository implements CompanyRepository {
                 rs.getString("industry")
         ));
     }
-}
 
+    @Override
+    public List<Company> search(String query, int limit) {
+        String normalized = query == null ? "" : query.trim();
+        String like = "%" + normalized + "%";
+        return jdbcTemplate.query("""
+                SELECT symbol, name, exchange, industry
+                FROM companies
+                WHERE ? = ''
+                   OR symbol ILIKE ?
+                   OR name ILIKE ?
+                   OR exchange ILIKE ?
+                   OR industry ILIKE ?
+                ORDER BY symbol
+                LIMIT ?
+                """, (rs, rowNum) -> new Company(
+                rs.getString("symbol"),
+                rs.getString("name"),
+                rs.getString("exchange"),
+                rs.getString("industry")
+        ), normalized, like, like, like, like, Math.max(1, limit));
+    }
+
+    @Override
+    public long count() {
+        Long count = jdbcTemplate.queryForObject("SELECT count(*) FROM companies", Long.class);
+        return count == null ? 0 : count;
+    }
+}
