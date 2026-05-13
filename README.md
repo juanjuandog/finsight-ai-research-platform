@@ -1,16 +1,112 @@
 # FinSight AI
 
-FinSight is a backend-heavy AI financial research platform prototype. It turns financial reports, filings, research notes, news, and market data into structured company events, financial metrics, and source-grounded AI answers.
+![Java](https://img.shields.io/badge/Java-17-blue)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-blue)
+![Redis](https://img.shields.io/badge/Redis-single--flight-red)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-workflows-orange)
 
-The first version focuses on architecture that is useful for interviews:
+Open-source AI equity research agent with evidence-grounded reports, resilient workflow orchestration, and RAG evaluation.
 
-- Multi-source financial data ingestion with adapter/template abstractions.
-- Event-driven document processing workflow with retryable task states.
-- Financial metric calculation and risk signal detection.
-- Retrieval-augmented answer orchestration with evidence binding.
-- Separate Java business backend and Python AI capability service.
-- Full A-share stock universe sync, async AI stock analysis, report persistence, and Redis-ready caching.
-- Static dashboard and RAG evaluation for demos and regression checks.
+FinSight turns filings, financial reports, research notes, market data, and company events into source-grounded answers and versioned AI research reports. The project is intentionally backend-heavy: it shows how to build the infrastructure around an AI agent, not just how to call a model.
+
+## Why It Exists
+
+Most RAG demos stop at "retrieve chunks and ask an LLM." FinSight focuses on the parts that make an AI research system dependable:
+
+- long-running agent workflows with explicit state transitions;
+- idempotent task submission and duplicate execution control;
+- Redis Lua single-flight leases with fencing tokens;
+- report caching tied to data snapshots instead of loose prompt strings;
+- PostgreSQL/pgvector hybrid retrieval with evidence traceability;
+- RAG and agent quality evaluation for regression checks.
+
+## Highlights
+
+| Area | What FinSight Implements |
+| --- | --- |
+| Agent workflow | Data ingestion, metric recalculation, document indexing, intelligence build, and AI report generation as recoverable stages |
+| Concurrency control | Idempotency keys, repository-level `createIfAbsent`, Redis Lua single-flight lease, fencing token, local fallback lock |
+| Failure recovery | Task status machine, stage tracking, retry, dead letter state, timeout takeover scheduler |
+| Trustworthy AI cache | `contextHash`, `dataSnapshotHash`, `reportVersion`, Redis/PostgreSQL-backed report reuse |
+| Retrieval | PostgreSQL JSONB, full-text search, pgvector embeddings, hybrid recall, deduped evidence chunks |
+| Evaluation | RAG hit rate, evidence coverage, answer coverage, hallucination risk, conclusion consistency, confidence calibration, latency |
+| Demo surface | Spring Boot API, static dashboard, sample data flow, Actuator and Prometheus metrics |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    UI["Dashboard / REST API"] --> Backend["Spring Boot Backend"]
+    Backend --> Workflow["Agent Workflow Orchestrator"]
+    Workflow --> MQ["RabbitMQ Async Queue"]
+    Workflow --> Redis["Redis Lua Lease + Cache"]
+    Workflow --> PG["PostgreSQL + pgvector"]
+    Backend --> AI["FastAPI AI Service / Ollama fallback"]
+    PG --> Retrieval["Hybrid Retrieval + Evidence"]
+    Retrieval --> Backend
+    AI --> Report["Versioned AI Report"]
+    Report --> PG
+    Backend --> Eval["RAG / Agent Evaluation"]
+```
+
+More detail: [Architecture Notes](docs/architecture.md)
+
+## Documentation
+
+- [Architecture Notes](docs/architecture.md)
+- [Resume And Interview Notes](docs/resume-and-interview.md)
+- [GitHub Presentation Snippets](docs/github-profile.md)
+
+## Quick Start
+
+### 1. Run the full stack
+
+```bash
+./scripts/run-full-stack.sh
+```
+
+Then open:
+
+```bash
+open http://localhost:8080
+```
+
+This starts the backend, dashboard, PostgreSQL/pgvector, RabbitMQ, Redis, the FastAPI AI sidecar, and supporting infrastructure. If Ollama is not running, the AI service returns deterministic fallback analysis so the demo still works.
+
+### 2. Seed and exercise the demo
+
+In another terminal:
+
+```bash
+./scripts/quick-demo.sh
+```
+
+Or run the smaller flows separately:
+
+```bash
+./scripts/demo-flow.sh
+./scripts/demo-workflow.sh
+```
+
+Useful endpoints:
+
+```bash
+GET  /api/workflows/summary
+POST /api/evaluations/rag/run
+GET  /api/companies/600519/ai-analysis/latest
+GET  /api/document-index/600519/search?q=现金流风险
+```
+
+### 3. Run without Docker
+
+For a lightweight local backend using in-memory repositories:
+
+```bash
+cd backend
+mvn spring-boot:run
+open http://localhost:8080
+```
 
 ## Modules
 
@@ -18,7 +114,7 @@ The first version focuses on architecture that is useful for interviews:
 - `ai-service`: FastAPI service for document parsing, entity extraction, embedding, rerank, and answer generation stubs.
 - `docker`: local infrastructure placeholders.
 
-## Run
+## Alternative Run Modes
 
 Backend:
 
@@ -76,7 +172,7 @@ The FastAPI sidecar calls `OLLAMA_BASE_URL` (`http://localhost:11434` by default
 missing, the endpoint returns a deterministic rule-based fallback with `aiGenerated=false`, so the dashboard
 keeps working.
 
-## Sample Flow
+## Sample API Flow
 
 1. `POST /api/ingestion/demo` seeds a sample company document and financial statements.
 2. `POST /api/metrics/recalculate/600519` calculates financial indicators and risk signals.
