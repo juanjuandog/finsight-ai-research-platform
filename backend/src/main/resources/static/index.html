@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FinSight Institutional Research Console</title>
   <link rel="icon" type="image/svg+xml" href="/brand-favicon.svg">
-  <link rel="stylesheet" href="/styles.css?v=20260513h">
+  <link rel="stylesheet" href="/styles.css?v=20260513i">
 </head>
 <body>
   <header class="terminal-topbar">
@@ -42,45 +42,7 @@
     </aside>
 
     <section class="workspace">
-      <section class="decision-stage">
-        <section id="overview" class="panel market-header">
-          <div>
-          <p class="eyebrow">Current Symbol</p>
-          <h1 id="companyName">贵州茅台</h1>
-          <p id="companyMeta">600519.SH · 待分析</p>
-          <p id="companyDescription" class="muted">系统会从实时行情、财务指标、风险信号和证据链生成机构化投研判断。</p>
-          </div>
-          <div id="marketQuote" class="market-summary">
-          <span>行情加载中</span>
-          </div>
-        </section>
-
-        <section id="thesis" class="panel analysis-card decision-card">
-          <div class="section-title">
-            <div>
-              <h2>AI 投研结论</h2>
-              <span id="analysisUpdatedAt">等待分析</span>
-            </div>
-            <div class="rating-stack">
-              <div id="ratingBadge" class="rating neutral">中性</div>
-              <strong id="confidenceScore">--</strong>
-            </div>
-          </div>
-          <p id="analysisConclusion" class="conclusion">输入股票代码并点击“生成 AI 研报”，系统会回答：能不能看、为什么、风险在哪里、证据来自哪里。</p>
-          <div class="decision-grid">
-            <article>
-              <span>为什么</span>
-              <div id="positivePoints" class="decision-list">等待分析结果。</div>
-            </article>
-            <article>
-              <span>风险在哪里</span>
-              <div id="negativePoints" class="decision-list">等待分析结果。</div>
-            </article>
-          </div>
-        </section>
-      </section>
-
-      <section class="panel chart-panel compact-chart">
+      <section class="panel chart-panel chart-hero">
         <div class="section-title">
           <div>
             <h2>价格走势</h2>
@@ -104,6 +66,44 @@
           <span><i class="line ma60"></i>MA60</span>
           <span><i class="bar"></i>成交量</span>
         </div>
+      </section>
+
+      <section class="first-screen-cards">
+        <section id="overview" class="panel market-header">
+          <div class="summary-heading">
+            <p class="eyebrow">Current Symbol</p>
+            <h1 id="companyName">贵州茅台</h1>
+            <p id="companyMeta">600519.SH</p>
+          </div>
+          <div id="marketQuote" class="market-summary">
+            <span>行情加载中</span>
+          </div>
+          <div id="summaryRatingBadge" class="rating neutral">AI评级 中性</div>
+        </section>
+
+        <section id="thesis" class="panel analysis-card decision-card">
+          <div class="section-title">
+            <div>
+              <h2>AI 简要结论</h2>
+              <span id="analysisUpdatedAt">等待分析</span>
+            </div>
+            <div class="rating-stack">
+              <div id="ratingBadge" class="rating neutral">中性</div>
+              <strong id="confidenceScore">--</strong>
+            </div>
+          </div>
+          <p id="analysisConclusion" class="conclusion">输入股票代码并点击“生成 AI 研报”，系统会输出一句话结论。</p>
+          <div class="decision-grid">
+            <article>
+              <span>理由</span>
+              <div id="positivePoints" class="decision-list">等待分析结果。</div>
+            </article>
+            <article>
+              <span>风险</span>
+              <div id="negativePoints" class="decision-list">等待分析结果。</div>
+            </article>
+          </div>
+        </section>
       </section>
 
       <section id="health" class="panel">
@@ -172,6 +172,6 @@
     </aside>
   </main>
 
-  <script src="/app.js?v=20260513h"></script>
+  <script src="/app.js?v=20260513i"></script>
 </body>
 </html>

@@ -67,8 +67,7 @@ function updateCompanyCard(quote = null) {
   const industry = company?.industry || "待分析";
   const exchange = quote?.exchange || company?.exchange || "CN";
   $("companyName").textContent = name;
-  $("companyMeta").textContent = `${symbol}.${exchange} · ${industry}`;
-  $("companyDescription").textContent = quote?.message || "系统会从实时行情、财务指标、风险信号和证据链生成机构化投研判断。";
+  $("companyMeta").textContent = `${symbol}.${exchange}`;
   renderQuote(quote);
 }
 
@@ -119,16 +118,8 @@ function renderQuote(quote) {
   $("marketStatus").className = `market-status ${quote.realtime ? "live" : "fallback"}`;
   $("marketQuote").innerHTML = `
     <section class="summary-price">
-      <span class="status-chip">${quote.realtime ? "实时行情" : "降级数据"}</span>
       <strong class="${direction}">${price > 0 ? price.toFixed(2) : "--"}</strong>
       <em class="${direction}">${formatSigned(change)} / ${formatSigned(changePercent)}%</em>
-    </section>
-    <section class="summary-facts">
-      <article><span>今开</span><strong>${formatPrice(quote.openPrice)}</strong></article>
-      <article><span>最高</span><strong class="up">${formatPrice(quote.highPrice)}</strong></article>
-      <article><span>最低</span><strong class="down">${formatPrice(quote.lowPrice)}</strong></article>
-      <article><span>成交额</span><strong>${formatMoney(amount)}</strong></article>
-      <article><span>更新时间</span><strong>${escapeHtml(quote.tradeTime || "--")}</strong></article>
     </section>
   `;
 }
@@ -190,9 +181,11 @@ function renderAnalysis(metrics, risks, quote, aiAnalysis = null) {
   const checks = metrics.length ? healthChecks(metrics) : [];
   if (!metrics.length) {
     const displayRating = aiAnalysis?.rating || "等待分析";
-    $("ratingBadge").textContent = displayRating;
-    $("ratingBadge").className = `rating ${ratingClass(displayRating)}`;
-    $("analysisConclusion").textContent = aiAnalysis?.summary || "点击“生成 AI 研报”后，系统会回答这只股票能不能看、为什么、风险在哪里、证据来自哪里。";
+  $("ratingBadge").textContent = displayRating;
+  $("ratingBadge").className = `rating ${ratingClass(displayRating)}`;
+  $("summaryRatingBadge").textContent = `AI评级 ${displayRating}`;
+  $("summaryRatingBadge").className = `rating ${ratingClass(displayRating)}`;
+  $("analysisConclusion").textContent = aiAnalysis?.summary || "点击“生成 AI 研报”后，系统会回答这只股票能不能看、为什么、风险在哪里、证据来自哪里。";
     $("positivePoints").innerHTML = decisionList(aiAnalysis?.positivePoints, "暂无核心理由。");
     $("negativePoints").innerHTML = decisionList(aiAnalysis?.riskPoints, "暂无主要风险。");
     $("confidenceScore").textContent = aiAnalysis?.confidence != null ? `${aiAnalysis.confidence}%` : "--";
@@ -211,6 +204,8 @@ function renderAnalysis(metrics, risks, quote, aiAnalysis = null) {
 
   $("ratingBadge").textContent = displayRating;
   $("ratingBadge").className = `rating ${ratingClass(displayRating)}`;
+  $("summaryRatingBadge").textContent = `AI评级 ${displayRating}`;
+  $("summaryRatingBadge").className = `rating ${ratingClass(displayRating)}`;
   $("analysisConclusion").textContent = aiAnalysis?.summary || conclusionText(company, rating, checks, risks, quote);
   $("positivePoints").innerHTML = decisionList(aiAnalysis?.positivePoints, positiveText(checks));
   $("negativePoints").innerHTML = decisionList(aiAnalysis?.riskPoints, negativeText(checks, risks, quote));
@@ -226,7 +221,7 @@ function renderChart(candles, quote, aiAnalysis) {
   const rect = canvas.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
   const width = Math.max(320, Math.floor(rect.width));
-  const height = 320;
+  const height = 520;
   canvas.width = Math.floor(width * dpr);
   canvas.height = Math.floor(height * dpr);
   canvas.style.height = `${height}px`;
@@ -458,14 +453,14 @@ function formatPoints(points) {
 
 function splitPoints(value) {
   if (Array.isArray(value)) {
-    return value.filter(Boolean).slice(0, 3);
+    return value.filter(Boolean).slice(0, 2);
   }
   return String(value || "")
     .replaceAll("。", "；")
     .split("；")
     .map(item => item.trim())
     .filter(Boolean)
-    .slice(0, 3);
+    .slice(0, 2);
 }
 
 function decisionList(points, fallback) {

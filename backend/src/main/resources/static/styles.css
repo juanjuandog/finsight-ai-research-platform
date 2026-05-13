@@ -1749,3 +1749,183 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* Chart-first layout pass: keep the first screen to chart, quote summary, and AI brief. */
+.terminal-shell {
+  grid-template-columns: 286px minmax(0, 1fr);
+  gap: 24px;
+  padding: 22px 28px 42px;
+}
+
+.workspace {
+  grid-column: 2;
+  gap: 22px;
+}
+
+.left-rail {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.right-rail {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.right-rail .panel {
+  box-shadow: none;
+}
+
+.chart-hero {
+  padding: 22px;
+  border-color: rgba(229, 225, 216, .72);
+  box-shadow: 0 1px 2px rgba(32, 35, 38, .04);
+}
+
+.chart-hero .section-title {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+}
+
+.chart-hero .chart-wrap {
+  min-height: 520px;
+  border-color: rgba(229, 225, 216, .78);
+}
+
+.chart-hero #priceChart {
+  height: 520px;
+}
+
+.chart-hero .chart-legend {
+  margin-top: 10px;
+}
+
+.first-screen-cards {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.first-screen-cards .panel {
+  box-shadow: none;
+}
+
+.market-header {
+  min-height: 0;
+  padding: 20px;
+}
+
+.summary-heading {
+  display: grid;
+  gap: 4px;
+}
+
+.summary-heading h1 {
+  font-size: 30px;
+}
+
+#companyMeta {
+  margin-top: 0;
+}
+
+.market-summary {
+  display: block;
+}
+
+.summary-price {
+  max-width: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.summary-price strong {
+  display: block;
+  font-size: 44px;
+}
+
+.summary-price em {
+  display: block;
+  margin-top: 6px;
+}
+
+#summaryRatingBadge {
+  width: fit-content;
+}
+
+.decision-card {
+  min-height: 0;
+  padding: 20px;
+}
+
+.decision-card .section-title {
+  margin-bottom: 12px;
+}
+
+.decision-card .conclusion {
+  margin-bottom: 14px;
+  font-size: 15px;
+  line-height: 1.55;
+  font-weight: 600;
+}
+
+.decision-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.decision-grid article {
+  padding: 12px;
+  border-color: rgba(229, 225, 216, .74);
+}
+
+.decision-list ol {
+  gap: 6px;
+  padding-left: 18px;
+}
+
+.decision-list li,
+.decision-list p {
+  font-size: 13px;
+}
+
+#health,
+#evidence {
+  margin-top: 10px;
+}
+
+.quality-collapsible {
+  grid-column: auto;
+}
+
+@media (max-width: 1480px) {
+  .right-rail {
+    grid-column: 2;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1180px) {
+  .terminal-shell,
+  .workspace,
+  .left-rail,
+  .right-rail {
+    grid-template-columns: 1fr;
+    grid-column: 1;
+  }
+
+  .first-screen-cards,
+  .right-rail {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-hero .chart-wrap,
+  .chart-hero #priceChart {
+    min-height: 380px;
+    height: 380px;
+  }
+}
