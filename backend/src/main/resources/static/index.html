@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FinSight Institutional Research Console</title>
   <link rel="icon" type="image/svg+xml" href="/brand-favicon.svg">
-  <link rel="stylesheet" href="/styles.css?v=20260513i">
+  <link rel="stylesheet" href="/styles.css?v=20260513j">
 </head>
 <body>
   <header class="terminal-topbar">
@@ -42,66 +42,68 @@
     </aside>
 
     <section class="workspace">
-      <section class="panel chart-panel chart-hero">
-        <div class="section-title">
-          <div>
-            <h2>价格走势</h2>
-            <span>收盘价 / MA5 / MA20 / MA60 / 成交量</span>
-          </div>
-          <div class="range-tabs" aria-label="图表周期">
-            <button class="range-tab active" data-limit="60">3M</button>
-            <button class="range-tab" data-limit="120">6M</button>
-            <button class="range-tab" data-limit="240">1Y</button>
-          </div>
-        </div>
-        <div class="chart-wrap">
-          <canvas id="priceChart" aria-label="股票价格走势折线图"></canvas>
-          <div id="chartTooltip" class="chart-tooltip" hidden></div>
-        </div>
-        <div id="chartStats" class="chart-stats"></div>
-        <div class="chart-legend">
-          <span><i class="line close"></i>收盘价</span>
-          <span><i class="line ma5"></i>MA5</span>
-          <span><i class="line ma20"></i>MA20</span>
-          <span><i class="line ma60"></i>MA60</span>
-          <span><i class="bar"></i>成交量</span>
-        </div>
-      </section>
+      <section class="chart-focus-row">
+        <section class="first-screen-cards">
+          <section id="overview" class="panel market-header">
+            <div class="summary-heading">
+              <p class="eyebrow">Current Symbol</p>
+              <h1 id="companyName">贵州茅台</h1>
+              <p id="companyMeta">600519.SH</p>
+            </div>
+            <div id="marketQuote" class="market-summary">
+              <span>行情加载中</span>
+            </div>
+            <div id="summaryRatingBadge" class="rating neutral">AI评级 中性</div>
+          </section>
 
-      <section class="first-screen-cards">
-        <section id="overview" class="panel market-header">
-          <div class="summary-heading">
-            <p class="eyebrow">Current Symbol</p>
-            <h1 id="companyName">贵州茅台</h1>
-            <p id="companyMeta">600519.SH</p>
-          </div>
-          <div id="marketQuote" class="market-summary">
-            <span>行情加载中</span>
-          </div>
-          <div id="summaryRatingBadge" class="rating neutral">AI评级 中性</div>
+          <section id="thesis" class="panel analysis-card decision-card">
+            <div class="section-title">
+              <div>
+                <h2>AI 简要结论</h2>
+                <span id="analysisUpdatedAt">等待分析</span>
+              </div>
+              <div class="rating-stack">
+                <div id="ratingBadge" class="rating neutral">中性</div>
+                <strong id="confidenceScore">--</strong>
+              </div>
+            </div>
+            <p id="analysisConclusion" class="conclusion">输入股票代码并点击“生成 AI 研报”，系统会输出一句话结论。</p>
+            <div class="decision-grid">
+              <article>
+                <span>理由</span>
+                <div id="positivePoints" class="decision-list">等待分析结果。</div>
+              </article>
+              <article>
+                <span>风险</span>
+                <div id="negativePoints" class="decision-list">等待分析结果。</div>
+              </article>
+            </div>
+          </section>
         </section>
 
-        <section id="thesis" class="panel analysis-card decision-card">
+        <section class="panel chart-panel chart-hero">
           <div class="section-title">
             <div>
-              <h2>AI 简要结论</h2>
-              <span id="analysisUpdatedAt">等待分析</span>
+              <h2>价格走势</h2>
+              <span>收盘价 / MA5 / MA20 / MA60 / 成交量</span>
             </div>
-            <div class="rating-stack">
-              <div id="ratingBadge" class="rating neutral">中性</div>
-              <strong id="confidenceScore">--</strong>
+            <div class="range-tabs" aria-label="图表周期">
+              <button class="range-tab active" data-limit="60">3M</button>
+              <button class="range-tab" data-limit="120">6M</button>
+              <button class="range-tab" data-limit="240">1Y</button>
             </div>
           </div>
-          <p id="analysisConclusion" class="conclusion">输入股票代码并点击“生成 AI 研报”，系统会输出一句话结论。</p>
-          <div class="decision-grid">
-            <article>
-              <span>理由</span>
-              <div id="positivePoints" class="decision-list">等待分析结果。</div>
-            </article>
-            <article>
-              <span>风险</span>
-              <div id="negativePoints" class="decision-list">等待分析结果。</div>
-            </article>
+          <div class="chart-wrap">
+            <canvas id="priceChart" aria-label="股票价格走势折线图"></canvas>
+            <div id="chartTooltip" class="chart-tooltip" hidden></div>
+          </div>
+          <div id="chartStats" class="chart-stats"></div>
+          <div class="chart-legend">
+            <span><i class="line close"></i>收盘价</span>
+            <span><i class="line ma5"></i>MA5</span>
+            <span><i class="line ma20"></i>MA20</span>
+            <span><i class="line ma60"></i>MA60</span>
+            <span><i class="bar"></i>成交量</span>
           </div>
         </section>
       </section>
@@ -172,6 +174,6 @@
     </aside>
   </main>
 
-  <script src="/app.js?v=20260513i"></script>
+  <script src="/app.js?v=20260513j"></script>
 </body>
 </html>

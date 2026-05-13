@@ -1929,3 +1929,86 @@ h1 {
     height: 380px;
   }
 }
+
+/* Move stock pool to top and place summary cards on the left of the chart. */
+.terminal-shell {
+  grid-template-columns: 1fr;
+}
+
+.left-rail {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.left-rail .panel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.left-rail .section-title {
+  margin: 0;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.stock-table-head {
+  display: none;
+}
+
+.stock-list {
+  display: flex;
+  gap: 8px;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.stock-row {
+  width: auto;
+  min-width: 220px;
+  grid-template-columns: minmax(0, 1fr) 86px 64px;
+  border-radius: 7px;
+}
+
+.stock-row.active::before {
+  inset: 7px auto 7px 0;
+}
+
+.workspace {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.chart-focus-row {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 22px;
+  align-items: stretch;
+}
+
+.chart-focus-row .first-screen-cards {
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.chart-focus-row .chart-hero {
+  min-width: 0;
+}
+
+.right-rail {
+  grid-column: 1;
+  grid-row: 3;
+}
+
+@media (max-width: 1180px) {
+  .left-rail .panel,
+  .chart-focus-row {
+    grid-template-columns: 1fr;
+  }
+
+  .stock-row {
+    min-width: 210px;
+  }
+}
