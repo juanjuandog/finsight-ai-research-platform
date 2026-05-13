@@ -117,11 +117,13 @@ Default profile still uses in-memory repositories so the backend remains easy to
 
 The workflow stage splits long financial data processing into task lifecycle and execution:
 
-- `WorkflowTask` stores idempotency key, status, attempt count, payload, and error message.
+- `WorkflowTask` stores idempotency key, status, agent stage, attempt count, payload, error message, lease owner, fencing token, and update time.
 - `WorkflowTaskPublisher` has two implementations:
   - default direct publisher for local development;
   - RabbitMQ publisher enabled by `rabbitmq` profile.
-- `WorkflowOrchestrator` executes task types and links ingestion to metric recalculation.
+- `WorkflowOrchestrator` uses Redis Lua single-flight leases, idempotency keys, and local fallback locking to prevent duplicate cross-node execution.
+- `WorkflowRecoveryScheduler` scans timed-out `RUNNING` tasks, marks them recoverable/dead-lettered, and republishes retryable work.
+- Agent stages model the long-running research flow from ingestion to metrics, indexing, intelligence build, AI analysis, success, failure, and recovery.
 - `DOCUMENT_INDEX_BUILD` chunks ingested documents and writes retrieval-ready evidence chunks.
 - `COMPANY_INTELLIGENCE_BUILD` turns documents, metrics, and risk signals into timeline events and graph relations.
 - `STOCK_AI_ANALYSIS` creates source-grounded AI stock reports and persists them for history and caching.
@@ -200,7 +202,7 @@ The final stage adds a demo console and regression-style RAG evaluation:
 - Static dashboard is served by Spring Boot from `/`.
 - The dashboard shows workflow tasks, metric output, retrieval evidence, timeline events, graph counts, and evaluation results.
 - `EvaluationCaseCatalog` defines fixed financial QA test cases.
-- `RagEvaluationService` checks evidence coverage, answer keyword coverage, citation presence, and latency.
+- `RagEvaluationService` checks RAG hit rate, evidence coverage, answer coverage, citation presence, hallucination risk, conclusion consistency, confidence calibration, and latency.
 
 Useful endpoints:
 
@@ -218,8 +220,8 @@ The stock AI stage turns the dashboard into a practical A-share research workflo
 - `StockAnalysisApplicationService` submits single-stock and batch analysis as workflow tasks.
 - `StockAiAnalysisService` builds a prompt context from quote data, financial metrics, risk signals, and RAG evidence chunks.
 - AI analysis calls the FastAPI sidecar and local Ollama when available, then falls back to deterministic rules when the model is unavailable.
-- `stock_analysis_reports` stores every generated report with model/source metadata, citations, context hash, and generated time.
-- `StockAnalysisCache` has an in-memory local implementation and a Redis implementation enabled by the `redis` profile.
+- `stock_analysis_reports` stores every generated report with model/source metadata, citations, context hash, `data_snapshot_hash`, report version, and generated time.
+- `StockAnalysisCache` has an in-memory local implementation and a Redis implementation enabled by the `redis` profile; cache keys are tied to the data snapshot hash so stale AI conclusions are not reused after evidence changes.
 - `StockMarketScheduler` can sync the stock universe and submit a morning batch scan on a configurable cron schedule.
 - `user_watchlists` provides a simple user-scoped stock watchlist foundation using the `X-Finsight-User` request header.
 

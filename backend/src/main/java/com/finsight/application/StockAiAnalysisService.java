@@ -102,7 +102,8 @@ public class StockAiAnalysisService {
         );
 
         String contextHash = contextHash(request);
-        String cacheKey = normalized + ":" + contextHash;
+        String dataSnapshotHash = contextHash;
+        String cacheKey = normalized + ":" + dataSnapshotHash;
         Optional<StockAiAnalysisResponse> cached = analysisCache.get(cacheKey)
                 .map(StockAiAnalysisResponse::withCacheHit);
         if (cached.isPresent()) {
@@ -131,7 +132,7 @@ public class StockAiAnalysisService {
         if (response == null || response.summary() == null || response.summary().isBlank()) {
             response = fallback(company, quote, metrics, risks, evidence);
         }
-        return persistAndCache(normalized, contextHash, cacheKey, response);
+        return persistAndCache(normalized, contextHash, dataSnapshotHash, cacheKey, response);
     }
 
     public Optional<StockAiAnalysisResponse> latest(String symbol) {
@@ -197,12 +198,20 @@ public class StockAiAnalysisService {
     private StockAiAnalysisResponse persistAndCache(
             String symbol,
             String contextHash,
+            String dataSnapshotHash,
             String cacheKey,
             StockAiAnalysisResponse response
     ) {
         Instant generatedAt = Instant.now();
         String reportId = UUID.randomUUID().toString();
-        StockAiAnalysisResponse enriched = response.withPersistence(reportId, generatedAt, false);
+        int reportVersion = (int) reportRepository.countByCompanySymbol(symbol) + 1;
+        StockAiAnalysisResponse enriched = response.withPersistence(
+                reportId,
+                generatedAt,
+                false,
+                dataSnapshotHash,
+                reportVersion
+        );
         reportRepository.save(new StockAnalysisReport(
                 reportId,
                 symbol,
@@ -216,6 +225,8 @@ public class StockAiAnalysisService {
                 safe(enriched.source(), "unknown"),
                 enriched.aiGenerated(),
                 contextHash,
+                dataSnapshotHash,
+                reportVersion,
                 generatedAt
         ));
         analysisCache.put(cacheKey, enriched, analysisCacheTtl);
@@ -235,7 +246,9 @@ public class StockAiAnalysisService {
                 report.aiGenerated(),
                 report.id(),
                 report.generatedAt(),
-                false
+                false,
+                report.dataSnapshotHash(),
+                report.reportVersion()
         );
     }
 
@@ -281,7 +294,9 @@ public class StockAiAnalysisService {
                 false,
                 null,
                 null,
-                false
+                false,
+                null,
+                0
         );
     }
 
@@ -376,9 +391,21 @@ public class StockAiAnalysisService {
             boolean aiGenerated,
             String reportId,
             Instant generatedAt,
-            boolean cacheHit
+            boolean cacheHit,
+            String dataSnapshotHash,
+            int reportVersion
     ) {
         public StockAiAnalysisResponse withPersistence(String reportId, Instant generatedAt, boolean cacheHit) {
+            return withPersistence(reportId, generatedAt, cacheHit, dataSnapshotHash, reportVersion);
+        }
+
+        public StockAiAnalysisResponse withPersistence(
+                String reportId,
+                Instant generatedAt,
+                boolean cacheHit,
+                String dataSnapshotHash,
+                int reportVersion
+        ) {
             return new StockAiAnalysisResponse(
                     rating,
                     summary,
@@ -391,7 +418,9 @@ public class StockAiAnalysisService {
                     aiGenerated,
                     reportId,
                     generatedAt,
-                    cacheHit
+                    cacheHit,
+                    dataSnapshotHash,
+                    reportVersion
             );
         }
 

@@ -1,12 +1,15 @@
 package com.finsight.infrastructure.jdbc;
 
+import com.finsight.workflow.AgentWorkflowStage;
 import com.finsight.workflow.WorkflowStatus;
 import com.finsight.workflow.WorkflowTask;
 import com.finsight.workflow.WorkflowTaskRepository;
 import org.springframework.context.annotation.Profile;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
@@ -26,28 +29,45 @@ public class JdbcWorkflowTaskRepository implements WorkflowTaskRepository {
     public WorkflowTask save(WorkflowTask task) {
         jdbcTemplate.update("""
                 INSERT INTO workflow_tasks(
-                    id, task_type, idempotency_key, status, attempts, created_at, payload, error_message, updated_at
+                    id, task_type, idempotency_key, status, stage, attempts, created_at, updated_at,
+                    payload, error_message, lease_owner, fencing_token
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, now())
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id)
                 DO UPDATE SET task_type = EXCLUDED.task_type,
                               idempotency_key = EXCLUDED.idempotency_key,
                               status = EXCLUDED.status,
+                              stage = EXCLUDED.stage,
                               attempts = EXCLUDED.attempts,
+                              updated_at = EXCLUDED.updated_at,
                               payload = EXCLUDED.payload,
                               error_message = EXCLUDED.error_message,
-                              updated_at = now()
+                              lease_owner = EXCLUDED.lease_owner,
+                              fencing_token = EXCLUDED.fencing_token
                 """,
                 task.id(),
                 task.taskType(),
                 task.idempotencyKey(),
                 task.status().name(),
+                task.stage().name(),
                 task.attempts(),
                 Timestamp.from(task.createdAt()),
+                Timestamp.from(task.updatedAt()),
                 jsonColumnMapper.jsonb(task.payload()),
-                task.errorMessage()
+                task.errorMessage(),
+                task.leaseOwner(),
+                task.fencingToken()
         );
         return task;
+    }
+
+    @Override
+    public WorkflowTask createIfAbsent(WorkflowTask task) {
+        try {
+            return save(task);
+        } catch (DataIntegrityViolationException ex) {
+            return findByIdempotencyKey(task.idempotencyKey()).orElseThrow(() -> ex);
+        }
     }
 
     @Override
@@ -63,7 +83,8 @@ public class JdbcWorkflowTaskRepository implements WorkflowTaskRepository {
     @Override
     public Optional<WorkflowTask> findById(String id) {
         return jdbcTemplate.query("""
-                SELECT id, task_type, idempotency_key, status, attempts, created_at, payload::text, error_message
+                SELECT id, task_type, idempotency_key, status, stage, attempts, created_at, updated_at,
+                       payload::text, error_message, lease_owner, fencing_token
                 FROM workflow_tasks
                 WHERE id = ?
                 """, this::mapTask, id).stream().findFirst();
@@ -72,7 +93,8 @@ public class JdbcWorkflowTaskRepository implements WorkflowTaskRepository {
     @Override
     public Optional<WorkflowTask> findByIdempotencyKey(String idempotencyKey) {
         return jdbcTemplate.query("""
-                SELECT id, task_type, idempotency_key, status, attempts, created_at, payload::text, error_message
+                SELECT id, task_type, idempotency_key, status, stage, attempts, created_at, updated_at,
+                       payload::text, error_message, lease_owner, fencing_token
                 FROM workflow_tasks
                 WHERE idempotency_key = ?
                 """, this::mapTask, idempotencyKey).stream().findFirst();
@@ -81,10 +103,22 @@ public class JdbcWorkflowTaskRepository implements WorkflowTaskRepository {
     @Override
     public List<WorkflowTask> findAll() {
         return jdbcTemplate.query("""
-                SELECT id, task_type, idempotency_key, status, attempts, created_at, payload::text, error_message
+                SELECT id, task_type, idempotency_key, status, stage, attempts, created_at, updated_at,
+                       payload::text, error_message, lease_owner, fencing_token
                 FROM workflow_tasks
                 ORDER BY created_at DESC
                 """, this::mapTask);
+    }
+
+    @Override
+    public List<WorkflowTask> findByStatusUpdatedBefore(WorkflowStatus status, Instant cutoff) {
+        return jdbcTemplate.query("""
+                SELECT id, task_type, idempotency_key, status, stage, attempts, created_at, updated_at,
+                       payload::text, error_message, lease_owner, fencing_token
+                FROM workflow_tasks
+                WHERE status = ? AND updated_at < ?
+                ORDER BY updated_at ASC
+                """, this::mapTask, status.name(), Timestamp.from(cutoff));
     }
 
     private WorkflowTask mapTask(java.sql.ResultSet rs, int rowNum) throws java.sql.SQLException {
@@ -93,10 +127,14 @@ public class JdbcWorkflowTaskRepository implements WorkflowTaskRepository {
                 rs.getString("task_type"),
                 rs.getString("idempotency_key"),
                 WorkflowStatus.valueOf(rs.getString("status")),
+                AgentWorkflowStage.valueOf(rs.getString("stage")),
                 rs.getInt("attempts"),
                 rs.getTimestamp("created_at").toInstant(),
+                rs.getTimestamp("updated_at").toInstant(),
                 jsonColumnMapper.objectMap(rs.getString("payload")),
-                rs.getString("error_message")
+                rs.getString("error_message"),
+                rs.getString("lease_owner"),
+                rs.getObject("fencing_token") == null ? null : rs.getLong("fencing_token")
         );
     }
 }

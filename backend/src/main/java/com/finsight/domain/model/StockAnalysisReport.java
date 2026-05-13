@@ -16,6 +16,8 @@ public record StockAnalysisReport(
         String source,
         boolean aiGenerated,
         String contextHash,
+        String dataSnapshotHash,
+        int reportVersion,
         Instant generatedAt
 ) {
 }

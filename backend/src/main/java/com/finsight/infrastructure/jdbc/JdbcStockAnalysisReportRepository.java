@@ -28,9 +28,9 @@ public class JdbcStockAnalysisReportRepository implements StockAnalysisReportRep
         jdbcTemplate.update("""
                 INSERT INTO stock_analysis_reports(
                     id, company_symbol, rating, summary, positive_points, risk_points, confidence,
-                    citations, model, source, ai_generated, context_hash, generated_at
+                    citations, model, source, ai_generated, context_hash, data_snapshot_hash, report_version, generated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id)
                 DO UPDATE SET rating = EXCLUDED.rating,
                               summary = EXCLUDED.summary,
@@ -42,6 +42,8 @@ public class JdbcStockAnalysisReportRepository implements StockAnalysisReportRep
                               source = EXCLUDED.source,
                               ai_generated = EXCLUDED.ai_generated,
                               context_hash = EXCLUDED.context_hash,
+                              data_snapshot_hash = EXCLUDED.data_snapshot_hash,
+                              report_version = EXCLUDED.report_version,
                               generated_at = EXCLUDED.generated_at
                 """,
                 report.id(),
@@ -56,6 +58,8 @@ public class JdbcStockAnalysisReportRepository implements StockAnalysisReportRep
                 report.source(),
                 report.aiGenerated(),
                 report.contextHash(),
+                report.dataSnapshotHash(),
+                report.reportVersion(),
                 Timestamp.from(report.generatedAt())
         );
         return report;
@@ -65,7 +69,8 @@ public class JdbcStockAnalysisReportRepository implements StockAnalysisReportRep
     public Optional<StockAnalysisReport> findLatest(String companySymbol) {
         return jdbcTemplate.query("""
                 SELECT id, company_symbol, rating, summary, positive_points::text, risk_points::text,
-                       confidence, citations::text, model, source, ai_generated, context_hash, generated_at
+                       confidence, citations::text, model, source, ai_generated, context_hash,
+                       data_snapshot_hash, report_version, generated_at
                 FROM stock_analysis_reports
                 WHERE company_symbol = ?
                 ORDER BY generated_at DESC
@@ -77,7 +82,8 @@ public class JdbcStockAnalysisReportRepository implements StockAnalysisReportRep
     public List<StockAnalysisReport> findByCompanySymbol(String companySymbol, int limit) {
         return jdbcTemplate.query("""
                 SELECT id, company_symbol, rating, summary, positive_points::text, risk_points::text,
-                       confidence, citations::text, model, source, ai_generated, context_hash, generated_at
+                       confidence, citations::text, model, source, ai_generated, context_hash,
+                       data_snapshot_hash, report_version, generated_at
                 FROM stock_analysis_reports
                 WHERE company_symbol = ?
                 ORDER BY generated_at DESC
@@ -109,6 +115,8 @@ public class JdbcStockAnalysisReportRepository implements StockAnalysisReportRep
                 rs.getString("source"),
                 rs.getBoolean("ai_generated"),
                 rs.getString("context_hash"),
+                rs.getString("data_snapshot_hash"),
+                rs.getInt("report_version"),
                 rs.getTimestamp("generated_at").toInstant()
         );
     }

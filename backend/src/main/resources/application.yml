@@ -49,3 +49,5 @@ finsight:
     ingestion-routing-key: workflow.ingestion
     dead-letter-exchange: finsight.workflow.dlx
     dead-letter-queue: finsight.workflow.dead-letter
+    running-timeout: PT10M
+    recovery-delay-ms: 60000

@@ -1,5 +1,6 @@
 package com.finsight.api;
 
+import com.finsight.workflow.AgentWorkflowStage;
 import com.finsight.workflow.WorkflowTask;
 import com.finsight.workflow.WorkflowTaskPublisher;
 import com.finsight.workflow.WorkflowTaskRepository;
@@ -38,16 +39,22 @@ public class WorkflowController {
     public WorkflowSummary summary() {
         List<WorkflowTask> tasks = taskRepository.findAll();
         Map<WorkflowStatus, Long> counts = new EnumMap<>(WorkflowStatus.class);
+        Map<AgentWorkflowStage, Long> stageCounts = new EnumMap<>(AgentWorkflowStage.class);
         for (WorkflowStatus status : WorkflowStatus.values()) {
             counts.put(status, 0L);
         }
+        for (AgentWorkflowStage stage : AgentWorkflowStage.values()) {
+            stageCounts.put(stage, 0L);
+        }
         for (WorkflowTask task : tasks) {
             counts.computeIfPresent(task.status(), (ignored, count) -> count + 1);
+            stageCounts.computeIfPresent(task.stage(), (ignored, count) -> count + 1);
         }
         long failed = counts.get(WorkflowStatus.FAILED) + counts.get(WorkflowStatus.DEAD_LETTER);
         return new WorkflowSummary(
                 tasks.size(),
                 counts,
+                stageCounts,
                 failed,
                 tasks.stream().map(WorkflowTask::createdAt).max(Instant::compareTo).orElse(null)
         );
@@ -80,6 +87,7 @@ public class WorkflowController {
     public record WorkflowSummary(
             int total,
             Map<WorkflowStatus, Long> counts,
+            Map<AgentWorkflowStage, Long> stageCounts,
             long failedOrDeadLetter,
             Instant latestCreatedAt
     ) {

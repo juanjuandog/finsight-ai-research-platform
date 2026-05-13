@@ -1,10 +1,13 @@
 package com.finsight.workflow;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 public interface WorkflowTaskRepository {
     WorkflowTask save(WorkflowTask task);
+
+    WorkflowTask createIfAbsent(WorkflowTask task);
 
     boolean existsByIdempotencyKey(String idempotencyKey);
 
@@ -13,4 +16,6 @@ public interface WorkflowTaskRepository {
     Optional<WorkflowTask> findByIdempotencyKey(String idempotencyKey);
 
     List<WorkflowTask> findAll();
+
+    List<WorkflowTask> findByStatusUpdatedBefore(WorkflowStatus status, Instant cutoff);
 }

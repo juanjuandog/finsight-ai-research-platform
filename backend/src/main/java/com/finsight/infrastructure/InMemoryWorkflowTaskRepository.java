@@ -1,10 +1,12 @@
 package com.finsight.infrastructure;
 
+import com.finsight.workflow.WorkflowStatus;
 import com.finsight.workflow.WorkflowTask;
 import com.finsight.workflow.WorkflowTaskRepository;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +21,12 @@ public class InMemoryWorkflowTaskRepository implements WorkflowTaskRepository {
     public WorkflowTask save(WorkflowTask task) {
         tasks.put(task.id(), task);
         return task;
+    }
+
+    @Override
+    public synchronized WorkflowTask createIfAbsent(WorkflowTask task) {
+        return findByIdempotencyKey(task.idempotencyKey())
+                .orElseGet(() -> save(task));
     }
 
     @Override
@@ -41,5 +49,13 @@ public class InMemoryWorkflowTaskRepository implements WorkflowTaskRepository {
     @Override
     public List<WorkflowTask> findAll() {
         return new ArrayList<>(tasks.values());
+    }
+
+    @Override
+    public List<WorkflowTask> findByStatusUpdatedBefore(WorkflowStatus status, Instant cutoff) {
+        return tasks.values().stream()
+                .filter(task -> task.status() == status)
+                .filter(task -> task.updatedAt().isBefore(cutoff))
+                .toList();
     }
 }

@@ -8,6 +8,8 @@ import com.finsight.domain.repository.DocumentRepository;
 import com.finsight.domain.repository.FinancialStatementRepository;
 import com.finsight.workflow.WorkflowTask;
 import com.finsight.workflow.WorkflowTaskRepository;
+import com.finsight.workflow.AgentWorkflowStage;
+import com.finsight.workflow.WorkflowStatus;
 import com.finsight.workflow.WorkflowTaskType;
 
 import java.time.LocalDate;
@@ -38,7 +40,7 @@ public abstract class FinancialDataIngestionTemplate implements FinancialDataSou
             return new IngestionResult(sourceName(), companySymbol, 0, 0, true);
         }
 
-        WorkflowTask task = taskRepository.save(WorkflowTask.created(
+        WorkflowTask task = taskRepository.createIfAbsent(WorkflowTask.created(
                 WorkflowTaskType.FINANCIAL_DATA_INGESTION,
                 idempotencyKey,
                 Map.of("source", sourceName(), "companySymbol", companySymbol)
@@ -50,7 +52,7 @@ public abstract class FinancialDataIngestionTemplate implements FinancialDataSou
     public WorkflowTask createIngestionTask(String companySymbol) {
         String idempotencyKey = ingestionIdempotencyKey(companySymbol);
         return taskRepository.findByIdempotencyKey(idempotencyKey)
-                .orElseGet(() -> taskRepository.save(WorkflowTask.created(
+                .orElseGet(() -> taskRepository.createIfAbsent(WorkflowTask.created(
                         WorkflowTaskType.FINANCIAL_DATA_INGESTION,
                         idempotencyKey,
                         Map.of("source", sourceName(), "companySymbol", companySymbol)
@@ -59,7 +61,9 @@ public abstract class FinancialDataIngestionTemplate implements FinancialDataSou
 
     public IngestionResult executeIngestionTask(WorkflowTask task) {
         String companySymbol = String.valueOf(task.payload().get("companySymbol"));
-        WorkflowTask runningTask = task.running();
+        WorkflowTask runningTask = task.status() == WorkflowStatus.RUNNING
+                ? task.atStage(AgentWorkflowStage.INGESTING_DATA)
+                : task.running();
         try {
             taskRepository.save(runningTask);
             List<Company> companies = fetchCompanies();
