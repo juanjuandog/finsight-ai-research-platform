@@ -3,101 +3,198 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FinSight AI 股票投研助手</title>
+  <title>FinSight Institutional Research Console</title>
   <link rel="icon" type="image/svg+xml" href="/brand-favicon.svg">
-  <link rel="stylesheet" href="/styles.css?v=20260512b">
+  <link rel="stylesheet" href="/styles.css?v=20260513f">
 </head>
 <body>
-  <header class="hero">
-    <div class="hero-inner">
-      <p class="kicker">FinSight AI Stock Research</p>
-      <h1>AI 股票投研助手</h1>
-      <p class="subtitle">输入股票代码，自动生成行情概览、AI 观点、财务健康度、风险信号和可追溯证据。</p>
-      <div class="stock-console" aria-label="股票分析控制台">
-        <input id="symbolInput" value="600519" maxlength="16" aria-label="股票代码">
-        <button id="runWorkflow">分析股票</button>
-      </div>
-      <div class="quick-symbols" aria-label="常用股票">
-        <button class="symbol-chip" data-symbol="600519">贵州茅台 600519</button>
-        <button class="symbol-chip" data-symbol="300750">宁德时代 300750</button>
-        <button class="symbol-chip" data-symbol="000001">平安银行 000001</button>
-        <button class="symbol-chip" data-symbol="002594">比亚迪 002594</button>
-      </div>
+  <header class="terminal-topbar">
+    <div class="brand">
+      <strong>FinSight AI</strong>
+      <span>Institutional Research Console</span>
+    </div>
+    <div class="stock-console" aria-label="股票分析控制台">
+      <label class="symbol-search">
+        <span>搜索标的</span>
+        <input id="symbolInput" value="600519" maxlength="16" list="stockSuggestions" aria-label="股票代码">
+      </label>
+      <datalist id="stockSuggestions"></datalist>
+      <span id="marketStatus" class="market-status">市场状态 待连接</span>
+      <span id="universeStatus" class="top-updated">更新时间 --</span>
+      <button id="runWorkflow">生成 AI 研报</button>
     </div>
   </header>
 
-  <nav class="nav">
-    <a href="#overview">概览</a>
-    <a href="#thesis">AI 观点</a>
-    <a href="#health">财务健康度</a>
-    <a href="#risks">风险信号</a>
-    <a href="#evidence">证据来源</a>
-  </nav>
+  <main class="terminal-shell">
+    <aside class="left-rail">
+      <section class="panel compact-panel">
+        <div class="section-title tight">
+          <h2>股票池</h2>
+          <span id="poolCount">--</span>
+        </div>
+        <div class="stock-table-head">
+          <span>名称</span>
+          <span>代码</span>
+          <span>涨跌幅</span>
+        </div>
+        <div id="stockList" class="stock-list"></div>
+      </section>
+      <section class="panel compact-panel">
+        <div class="section-title tight">
+          <h2>股票池操作</h2>
+          <span>免费数据</span>
+        </div>
+        <div class="pool-actions">
+          <button id="syncUniverse" class="ghost compact">同步股票池</button>
+          <button id="batchAnalyze" class="ghost compact">批量分析 20 只</button>
+        </div>
+      </section>
+      <section class="panel compact-panel">
+        <div class="section-title tight">
+          <h2>快捷分析</h2>
+          <span>常用标的</span>
+        </div>
+        <div class="quick-symbols" aria-label="常用股票">
+          <button class="symbol-chip" data-symbol="600519">贵州茅台 600519</button>
+          <button class="symbol-chip" data-symbol="300750">宁德时代 300750</button>
+          <button class="symbol-chip" data-symbol="000001">平安银行 000001</button>
+          <button class="symbol-chip" data-symbol="002594">比亚迪 002594</button>
+        </div>
+      </section>
+    </aside>
 
-  <main class="page">
-    <section id="overview" class="profile-grid">
-      <aside class="profile-card paper">
-        <h2 id="companyName">贵州茅台</h2>
-        <p id="companyMeta">股票代码 600519</p>
-        <p id="companyDescription">输入股票代码后，系统会围绕该公司生成投研观点、风险信号和证据链。</p>
-        <div id="marketQuote" class="quote-box">
+    <section class="workspace">
+      <section id="overview" class="panel market-header">
+        <div>
+          <p class="eyebrow">Current Symbol</p>
+          <h1 id="companyName">贵州茅台</h1>
+          <p id="companyMeta">600519.SH · 待分析</p>
+          <p id="companyDescription" class="muted">系统会从实时行情、财务指标、风险信号和证据链生成机构化投研判断。</p>
+        </div>
+        <div id="marketQuote" class="market-summary">
           <span>行情加载中</span>
         </div>
-      </aside>
+      </section>
 
-      <section id="thesis" class="paper analysis-card">
+      <section class="panel chart-panel">
         <div class="section-title">
-          <h2>AI 投研结论</h2>
-          <span id="analysisUpdatedAt">等待分析</span>
+          <div>
+            <h2>价格走势</h2>
+            <span>收盘价 / MA5 / MA20 / MA60 / 成交量</span>
+          </div>
+          <div class="range-tabs" aria-label="图表周期">
+            <button class="range-tab active" data-limit="60">3M</button>
+            <button class="range-tab" data-limit="120">6M</button>
+            <button class="range-tab" data-limit="240">1Y</button>
+          </div>
         </div>
-        <div id="ratingBadge" class="rating neutral">中性</div>
-        <p id="analysisConclusion" class="conclusion">输入股票代码并点击“分析股票”，系统会根据行情、财务指标、风险规则和证据文本生成结构化观点。</p>
-        <div class="thesis-grid">
-          <article>
-            <span>关注理由</span>
-            <p id="positivePoints">等待分析结果。</p>
-          </article>
-          <article>
-            <span>主要风险</span>
-            <p id="negativePoints">等待分析结果。</p>
-          </article>
-          <article>
-            <span>结论置信度</span>
-            <strong id="confidenceScore">--</strong>
-          </article>
+        <div class="chart-wrap">
+          <canvas id="priceChart" aria-label="股票价格走势折线图"></canvas>
+          <div id="chartTooltip" class="chart-tooltip" hidden></div>
         </div>
+        <div id="chartStats" class="chart-stats"></div>
+        <div class="chart-legend">
+          <span><i class="line close"></i>收盘价</span>
+          <span><i class="line ma5"></i>MA5</span>
+          <span><i class="line ma20"></i>MA20</span>
+          <span><i class="line ma60"></i>MA60</span>
+          <span><i class="bar"></i>成交量</span>
+        </div>
+      </section>
+
+      <section class="main-grid">
+        <section id="thesis" class="panel analysis-card">
+          <div class="section-title">
+            <div>
+              <h2>AI 投研结论</h2>
+              <span id="analysisUpdatedAt">等待分析</span>
+            </div>
+            <div id="ratingBadge" class="rating neutral">中性</div>
+          </div>
+          <p id="analysisConclusion" class="conclusion">输入股票代码并点击“生成 AI 研报”，系统会根据行情、财务指标、风险规则和证据文本生成结构化观点。</p>
+          <div class="thesis-grid">
+            <article>
+              <span>关注理由</span>
+              <p id="positivePoints">等待分析结果。</p>
+            </article>
+            <article>
+              <span>主要风险</span>
+              <p id="negativePoints">等待分析结果。</p>
+            </article>
+            <article>
+              <span>结论置信度</span>
+              <strong id="confidenceScore">--</strong>
+            </article>
+          </div>
+        </section>
+
+        <section id="risks" class="panel">
+          <div class="section-title">
+            <div>
+              <h2>风险信号</h2>
+              <span>财务指标与规则引擎</span>
+            </div>
+          </div>
+          <div id="riskList" class="list"></div>
+        </section>
+      </section>
+
+      <section id="health" class="panel">
+        <div class="section-title">
+          <div>
+            <h2>财务健康度</h2>
+            <span>盈利、成长、现金流、杠杆与回款质量</span>
+          </div>
+        </div>
+        <div id="healthList" class="health-grid"></div>
+      </section>
+
+      <section id="evidence" class="panel">
+        <div class="section-title">
+          <div>
+            <h2>证据来源</h2>
+            <span>公开财报、公告和指标文本的可追溯片段</span>
+          </div>
+          <div class="search-row">
+            <input id="searchInput" value="现金流风险" aria-label="检索问题">
+            <button id="searchButton" class="compact">查找证据</button>
+          </div>
+        </div>
+        <div id="retrievalList" class="list evidence-list"></div>
       </section>
     </section>
 
-    <section id="health" class="paper">
-      <div class="section-title">
-        <h2>财务健康度</h2>
-        <span>盈利、成长、现金流、杠杆与回款质量</span>
-      </div>
-      <div id="healthList" class="health-grid"></div>
-    </section>
+    <aside class="right-rail">
+      <section class="panel compact-panel ai-side-card">
+        <div class="section-title tight">
+          <h2>AI Brief</h2>
+          <span id="aiBriefMeta">Research View</span>
+        </div>
+        <div id="aiBriefPanel" class="ai-panel-body">
+          <p>等待生成 AI 研报，系统会汇总行情、指标和证据形成投研判断。</p>
+        </div>
+      </section>
 
-    <section id="risks" class="paper">
-      <div class="section-title">
-        <h2>风险信号</h2>
-        <span>由财务指标和规则引擎生成</span>
-      </div>
-      <div id="riskList" class="list"></div>
-    </section>
+      <section class="panel compact-panel ai-side-card">
+        <div class="section-title tight">
+          <h2>Risk Signals</h2>
+          <span>Multi-factor</span>
+        </div>
+        <div id="riskSignalPanel" class="signal-list"></div>
+      </section>
 
-    <section id="evidence" class="paper">
-      <div class="section-title">
-        <h2>证据来源</h2>
-        <span>公开财报、公告和指标文本的可追溯片段</span>
-      </div>
-      <div class="search-row">
-        <input id="searchInput" value="现金流风险" aria-label="检索问题">
-        <button id="searchButton" class="compact">查找证据</button>
-      </div>
-      <div id="retrievalList" class="list"></div>
-    </section>
+      <section class="panel compact-panel ai-side-card">
+        <div class="section-title tight">
+          <h2>Data Quality</h2>
+          <span>Coverage</span>
+        </div>
+        <div id="dataQualityPanel" class="quality-list">
+          <span>数据质量加载中</span>
+        </div>
+      </section>
+    </aside>
   </main>
 
-  <script src="/app.js?v=20260512b"></script>
+  <script src="/app.js?v=20260513f"></script>
 </body>
 </html>

@@ -1,5 +1,11 @@
 let symbol = "600519";
 let companies = [];
+let companyTotal = 0;
+let suggestionTimer = null;
+let chartLimit = 120;
+let latestQuote = null;
+let latestCandles = [];
+let latestAiAnalysis = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -11,22 +17,19 @@ async function request(path, options = {}) {
   return response.json();
 }
 
-function item(title, body, meta = "") {
-  return `<div class="item"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(body || "")}</p>${meta ? `<div class="meta">${escapeHtml(meta)}</div>` : ""}</div>`;
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 async function refresh() {
-  const [nextCompanies, quote, metrics, risks] = await Promise.all([
-    request("/api/companies").catch(() => companies),
+  const [
+    nextCompanies,
+    countResult,
+    quote,
+    candles,
+    metrics,
+    risks,
+    status,
+    aiAnalysis
+  ] = await Promise.all([
+    request("/api/companies?limit=200").catch(() => companies),
+    request("/api/companies/count").catch(() => ({ count: companies.length })),
     request(`/api/market/quotes/${symbol}`).catch(error => ({
       symbol,
       name: `股票 ${symbol}`,
@@ -35,13 +38,27 @@ async function refresh() {
       source: "LOCAL_ERROR",
       message: error.message
     })),
+    request(`/api/market/history/${symbol}?limit=${chartLimit}`).catch(() => []),
     request(`/api/metrics/${symbol}`).catch(() => []),
-    request(`/api/metrics/${symbol}/risks`).catch(() => [])
+    request(`/api/metrics/${symbol}/risks`).catch(() => []),
+    request(`/api/companies/${symbol}/analysis-status`).catch(() => null),
+    request(`/api/companies/${symbol}/ai-analysis/latest`).catch(() => null)
   ]);
 
   companies = nextCompanies;
+  companyTotal = Number(countResult.count || companies.length || 0);
+  latestQuote = quote;
+  latestCandles = candles;
+  latestAiAnalysis = aiAnalysis;
+
+  renderUniverseStatus();
+  renderStockList();
   updateCompanyCard(quote);
-  renderAnalysis(metrics, risks, quote);
+  renderDataStatus(status, quote, aiAnalysis);
+  renderReportMeta(aiAnalysis, status, metrics, risks, quote);
+  renderAnalysis(metrics, risks, quote, aiAnalysis);
+  renderChart(candles, quote, aiAnalysis);
+  renderChartStats(candles, quote);
 }
 
 function updateCompanyCard(quote = null) {
@@ -50,57 +67,392 @@ function updateCompanyCard(quote = null) {
   const industry = company?.industry || "待分析";
   const exchange = quote?.exchange || company?.exchange || "CN";
   $("companyName").textContent = name;
-  $("companyMeta").textContent = `股票代码 ${symbol} · ${exchange} · ${industry}`;
-  $("companyDescription").textContent = `当前正在分析 ${name}。系统会从行情、财务指标和文档证据中提炼投资关注点。`;
+  $("companyMeta").textContent = `${symbol}.${exchange} · ${industry}`;
+  $("companyDescription").textContent = quote?.message || "系统会从实时行情、财务指标、风险信号和证据链生成机构化投研判断。";
   renderQuote(quote);
+}
+
+function renderUniverseStatus(message = "") {
+  const updatedAt = latestQuote?.tradeTime || formatDateTime(latestAiAnalysis?.generatedAt) || "--";
+  $("universeStatus").textContent = message || `更新时间 ${updatedAt}`;
+  $("poolCount").textContent = `${companyTotal || companies.length || 0} 只`;
+}
+
+function renderStockList() {
+  const activeCompany = companies.find(company => company.symbol === symbol);
+  const visible = companies.slice(0, 24);
+  if (activeCompany && !visible.some(company => company.symbol === symbol)) {
+    visible.unshift(activeCompany);
+  }
+  $("stockList").innerHTML = visible.map(company => {
+    const isActive = company.symbol === symbol;
+    const changePercent = isActive && latestQuote ? numeric(latestQuote.changePercent) : null;
+    const changeText = changePercent == null ? "--" : `${formatSigned(changePercent)}%`;
+    const changeClass = changePercent == null ? "" : changePercent >= 0 ? "up" : "down";
+    return `
+    <button class="stock-row ${company.symbol === symbol ? "active" : ""}" data-symbol="${escapeHtml(company.symbol)}">
+      <span class="stock-name">${escapeHtml(company.name)}</span>
+      <span class="stock-code">${escapeHtml(company.symbol)}.${escapeHtml(company.exchange || "CN")}</span>
+      <span class="stock-change ${changeClass}">${escapeHtml(changeText)}</span>
+    </button>
+  `;
+  }).join("") || `<div class="item"><h3>暂无股票</h3><p>点击同步股票池后可加载 A 股列表。</p></div>`;
+  document.querySelectorAll(".stock-row").forEach(button => {
+    button.addEventListener("click", () => selectSymbol(button.dataset.symbol));
+  });
 }
 
 function renderQuote(quote) {
   if (!quote) {
     $("marketQuote").innerHTML = "<span>行情加载中</span>";
+    $("marketStatus").textContent = "市场状态 待连接";
+    $("marketStatus").className = "market-status";
     return;
   }
-  const price = quote.currentPrice && Number(quote.currentPrice) > 0 ? Number(quote.currentPrice).toFixed(2) : "--";
-  const change = quote.changePercent != null && Number(quote.currentPrice || 0) > 0 ? `${Number(quote.changePercent).toFixed(2)}%` : "--";
-  const source = quote.realtime ? "实时行情" : "降级数据";
+  const price = numeric(quote.currentPrice);
+  const change = numeric(quote.change);
+  const changePercent = numeric(quote.changePercent);
+  const direction = changePercent >= 0 ? "up" : "down";
+  const latestCandle = Array.isArray(latestCandles) ? latestCandles[latestCandles.length - 1] : null;
+  const amount = numeric(latestCandle?.amount);
+  $("marketStatus").textContent = quote.realtime ? "市场状态 实时接入" : "市场状态 降级数据";
+  $("marketStatus").className = `market-status ${quote.realtime ? "live" : "fallback"}`;
   $("marketQuote").innerHTML = `
-    <span>${source}</span>
-    <strong>${price}</strong>
-    <em class="${Number(quote.changePercent || 0) < 0 ? "down" : ""}">${change}</em>
-    <small>${escapeHtml(quote.message || quote.source || "")}</small>
+    <section class="summary-price">
+      <span class="status-chip">${quote.realtime ? "实时行情" : "降级数据"}</span>
+      <strong class="${direction}">${price > 0 ? price.toFixed(2) : "--"}</strong>
+      <em class="${direction}">${formatSigned(change)} / ${formatSigned(changePercent)}%</em>
+    </section>
+    <section class="summary-facts">
+      <article><span>今开</span><strong>${formatPrice(quote.openPrice)}</strong></article>
+      <article><span>最高</span><strong class="up">${formatPrice(quote.highPrice)}</strong></article>
+      <article><span>最低</span><strong class="down">${formatPrice(quote.lowPrice)}</strong></article>
+      <article><span>成交额</span><strong>${formatMoney(amount)}</strong></article>
+      <article><span>更新时间</span><strong>${escapeHtml(quote.tradeTime || "--")}</strong></article>
+    </section>
   `;
 }
 
-function renderAnalysis(metrics, risks, quote) {
+function renderDataStatus(status, quote, aiAnalysis) {
+  if (!status) {
+    $("dataQualityPanel").innerHTML = `<div class="empty-note">数据质量暂不可用，等待后端状态接口返回。</div>`;
+    return;
+  }
+  const quoteTime = status.quoteTradedAt ? status.quoteTradedAt.replace("T", " ") : "--";
+  const metricTime = status.latestMetricRunAt ? status.latestMetricRunAt.replace("T", " ").replace("Z", "") : "--";
+  const workflow = status.latestWorkflowStatus || "暂无任务";
+  const aiTime = status.latestAiReportAt ? status.latestAiReportAt.replace("T", " ").replace("Z", "") : "--";
+  const qualities = [
+    ["行情源", status.quoteRealtime ? "Sina 实时行情接入正常" : "行情源降级，需关注时效", status.quoteRealtime ? "good" : "watch"],
+    ["行情接口", quote?.tradeTime ? `最新 ${quoteTime}` : "等待行情刷新", quote?.tradeTime ? "good" : "watch"],
+    ["财报索引", `${Number(status.documentCount || 0)} 份文档 / ${Number(status.chunkCount || 0)} 段证据`, Number(status.chunkCount || 0) > 0 ? "good" : "watch"],
+    ["指标任务", `${Number(status.metricRunCount || 0)} 次计算 / ${metricTime}`, Number(status.metricRunCount || 0) > 0 ? "good" : "watch"],
+    ["规则兜底", aiAnalysis ? (aiAnalysis.aiGenerated ? "本地模型输出，规则兜底未启用" : "Ollama 不可用，已启用规则兜底") : "等待 AI 报告生成", aiAnalysis?.aiGenerated ? "good" : "watch"],
+    ["报告时间", Number(status.aiReportCount || 0) > 0 ? `${Number(status.aiReportCount || 0)} 份 / ${aiTime}` : "暂无报告", Number(status.aiReportCount || 0) > 0 ? "good" : "watch"],
+    ["工作流", workflow, workflow === "SUCCEEDED" ? "good" : workflow === "FAILED" ? "risk" : "watch"]
+  ];
+  $("dataQualityPanel").innerHTML = qualities.map(([label, value, level]) => qualityItem(label, value, level)).join("")
+    + (status.latestWorkflowError ? `<div class="empty-note">${escapeHtml(status.latestWorkflowError)}</div>` : "");
+}
+
+function renderReportMeta(aiAnalysis, status, metrics, risks, quote) {
+  const rating = aiAnalysis?.rating || "待生成";
+  const confidence = aiAnalysis?.confidence != null ? `${aiAnalysis.confidence}%` : "--";
+  $("aiBriefMeta").textContent = aiAnalysis ? formatDateTime(aiAnalysis.generatedAt) || "Latest" : "Pending";
+  $("aiBriefPanel").innerHTML = aiAnalysis ? `
+    <div class="brief-rating">
+      <span>综合判断</span>
+      <strong>${escapeHtml(rating)}</strong>
+    </div>
+    <p>${escapeHtml(aiAnalysis.summary || "AI 已生成结构化观点，但摘要内容暂为空。")}</p>
+    <dl class="brief-facts">
+      <div><dt>置信度</dt><dd>${escapeHtml(confidence)}</dd></div>
+      <div><dt>核心原因</dt><dd>${escapeHtml(formatPoints(aiAnalysis.positivePoints) || "等待更多财务指标与公告证据。")}</dd></div>
+      <div><dt>模型来源</dt><dd>${escapeHtml(aiAnalysis.aiGenerated ? "Ollama 本地模型" : "规则兜底")}</dd></div>
+    </dl>
+  ` : `
+    <div class="brief-rating pending">
+      <span>综合判断</span>
+      <strong>待生成</strong>
+    </div>
+    <p>点击“生成 AI 研报”后，系统会结合实时行情、财务指标、风险规则和证据索引输出机构化简报。</p>
+  `;
+
+  $("riskSignalPanel").innerHTML = riskSignalItems(risks, quote, aiAnalysis).join("");
+}
+
+function renderAnalysis(metrics, risks, quote, aiAnalysis = null) {
+  const checks = metrics.length ? healthChecks(metrics) : [];
   if (!metrics.length) {
-    $("ratingBadge").textContent = "等待分析";
-    $("ratingBadge").className = "rating neutral";
-    $("analysisConclusion").textContent = "点击“分析股票”后，系统会生成财务指标、风险信号和证据来源。";
-    $("positivePoints").textContent = "暂无分析结果。";
-    $("negativePoints").textContent = "暂无分析结果。";
-    $("confidenceScore").textContent = "--";
-    $("analysisUpdatedAt").textContent = "暂无数据";
+    const displayRating = aiAnalysis?.rating || "等待分析";
+    $("ratingBadge").textContent = displayRating;
+    $("ratingBadge").className = `rating ${ratingClass(displayRating)}`;
+    $("analysisConclusion").textContent = aiAnalysis?.summary || "点击“生成 AI 研报”后，系统会生成财务指标、风险信号和证据来源。";
+    $("positivePoints").textContent = formatPoints(aiAnalysis?.positivePoints) || "暂无分析结果。";
+    $("negativePoints").textContent = formatPoints(aiAnalysis?.riskPoints) || "暂无分析结果。";
+    $("confidenceScore").textContent = aiAnalysis?.confidence != null ? `${aiAnalysis.confidence}%` : "--";
+    $("analysisUpdatedAt").textContent = aiAnalysis ? analysisMeta(aiAnalysis) : "暂无数据";
     $("healthList").innerHTML = emptyHealth();
-    $("riskList").innerHTML = item("暂无风险信号", "请先分析股票，系统会根据财务指标和文本证据识别风险。");
+    $("riskList").innerHTML = aiAnalysis
+      ? riskItemsFromAi(aiAnalysis)
+      : item("暂无风险信号", "请先生成 AI 研报，系统会根据财务指标和文本证据识别风险。");
     return;
   }
 
-  const checks = healthChecks(metrics);
   const warningCount = checks.filter(check => check.level !== "good").length + risks.length;
   const quoteWeak = Number(quote?.changePercent || 0) < -1;
   const rating = warningCount >= 4 || quoteWeak ? "谨慎" : warningCount >= 2 ? "中性" : "积极";
   const confidence = Math.max(68, Math.min(92, 86 - warningCount * 4 + (quote?.realtime ? 4 : 0)));
   const company = quote?.name || companies.find(item => item.symbol === symbol)?.name || `股票 ${symbol}`;
+  const displayRating = aiAnalysis?.rating || rating;
+  const displayConfidence = aiAnalysis?.confidence ?? confidence;
 
-  $("ratingBadge").textContent = rating;
-  $("ratingBadge").className = `rating ${rating === "积极" ? "positive" : rating === "谨慎" ? "cautious" : "neutral"}`;
-  $("analysisConclusion").textContent = conclusionText(company, rating, checks, risks, quote);
-  $("positivePoints").textContent = positiveText(checks);
-  $("negativePoints").textContent = negativeText(checks, risks, quote);
-  $("confidenceScore").textContent = `${confidence}%`;
-  $("analysisUpdatedAt").textContent = quote?.tradeDate && quote?.tradeTime ? `${quote.tradeDate} ${quote.tradeTime}` : "基于当前数据";
+  $("ratingBadge").textContent = displayRating;
+  $("ratingBadge").className = `rating ${ratingClass(displayRating)}`;
+  $("analysisConclusion").textContent = aiAnalysis?.summary || conclusionText(company, rating, checks, risks, quote);
+  $("positivePoints").textContent = formatPoints(aiAnalysis?.positivePoints) || positiveText(checks);
+  $("negativePoints").textContent = formatPoints(aiAnalysis?.riskPoints) || negativeText(checks, risks, quote);
+  $("confidenceScore").textContent = `${displayConfidence}%`;
+  $("analysisUpdatedAt").textContent = aiAnalysis ? analysisMeta(aiAnalysis) : quote?.tradeDate && quote?.tradeTime ? `${quote.tradeDate} ${quote.tradeTime}` : "基于当前数据";
   $("healthList").innerHTML = checks.map(healthCard).join("");
   $("riskList").innerHTML = riskItems(risks, checks, quote);
+}
+
+function renderChart(candles, quote, aiAnalysis) {
+  const canvas = $("priceChart");
+  const tooltip = $("chartTooltip");
+  const ctx = canvas.getContext("2d");
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const width = Math.max(320, Math.floor(rect.width));
+  const height = 430;
+  canvas.width = Math.floor(width * dpr);
+  canvas.height = Math.floor(height * dpr);
+  canvas.style.height = `${height}px`;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  tooltip.hidden = true;
+  canvas.onmousemove = null;
+  canvas.onmouseleave = null;
+
+  if (!Array.isArray(candles) || candles.length < 2) {
+    drawEmptyChart(ctx, width, height);
+    return;
+  }
+
+  const data = candles.map(candle => ({
+    date: candle.tradeDate,
+    open: numeric(candle.open),
+    close: numeric(candle.close),
+    high: numeric(candle.high),
+    low: numeric(candle.low),
+    volume: numeric(candle.volume),
+    changePercent: numeric(candle.changePercent)
+  })).filter(candle => candle.close > 0);
+
+  if (data.length < 2) {
+    drawEmptyChart(ctx, width, height);
+    return;
+  }
+
+  const ma5 = movingAverage(data, 5);
+  const ma20 = movingAverage(data, 20);
+  const ma60 = movingAverage(data, 60);
+  const priceValues = [
+    ...data.flatMap(candle => [candle.high, candle.low]),
+    ...ma5.filter(Boolean),
+    ...ma20.filter(Boolean),
+    ...ma60.filter(Boolean)
+  ];
+  const minPrice = Math.min(...priceValues);
+  const maxPrice = Math.max(...priceValues);
+  const maxVolume = Math.max(...data.map(candle => candle.volume), 1);
+  const pad = { left: 54, right: 62, top: 24, bottom: 92 };
+  const volumeHeight = 72;
+  const priceBottom = height - pad.bottom - volumeHeight;
+  const priceHeight = priceBottom - pad.top;
+  const volumeTop = priceBottom + 18;
+  const span = Math.max(maxPrice - minPrice, 1);
+  const xStep = (width - pad.left - pad.right) / Math.max(data.length - 1, 1);
+  const x = index => pad.left + index * xStep;
+  const y = value => pad.top + (maxPrice - value) / span * priceHeight;
+  const vy = volume => volumeTop + volumeHeight - volume / maxVolume * volumeHeight;
+
+  const drawBaseChart = () => {
+    ctx.clearRect(0, 0, width, height);
+    drawGrid(ctx, width, height, pad, priceBottom, volumeTop, minPrice, maxPrice);
+    drawVolume(ctx, data, x, vy, volumeTop, volumeHeight, xStep);
+    drawLine(ctx, data.map(candle => candle.close), x, y, "#252A2E", 1.7);
+    drawLine(ctx, ma5, x, y, "#7F93A7", 1.05);
+    drawLine(ctx, ma20, x, y, "#A98C56", 1.05);
+    drawLine(ctx, ma60, x, y, "#7D9B8A", 1.05);
+    drawAiMarker(ctx, data, aiAnalysis, x, y);
+  };
+
+  drawBaseChart();
+
+  canvas.onmousemove = event => {
+    const bounds = canvas.getBoundingClientRect();
+    const mouseX = event.clientX - bounds.left;
+    const index = Math.min(data.length - 1, Math.max(0, Math.round((mouseX - pad.left) / xStep)));
+    const candle = data[index];
+    const cx = x(index);
+    drawBaseChart();
+    drawCrosshair(ctx, cx, pad.top, height - 32);
+    tooltip.hidden = false;
+    tooltip.style.left = `${Math.min(width - 210, Math.max(10, cx + 12))}px`;
+    tooltip.style.top = `${Math.max(10, y(candle.close) - 28)}px`;
+    tooltip.innerHTML = `
+      <strong>${escapeHtml(candle.date)}</strong>
+      <div>收盘：${formatNumber(candle.close)}</div>
+      <div>涨跌：<span class="${candle.changePercent >= 0 ? "up" : "down"}">${formatSigned(candle.changePercent)}%</span></div>
+      <div>成交量：${formatVolume(candle.volume)}</div>
+    `;
+  };
+  canvas.onmouseleave = () => {
+    tooltip.hidden = true;
+    drawBaseChart();
+  };
+}
+
+function drawEmptyChart(ctx, width, height) {
+  ctx.fillStyle = "#FFFFFF";
+  ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = "#F0EDE7";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 6; i++) {
+    const y = 36 + i * ((height - 92) / 5);
+    ctx.beginPath();
+    ctx.moveTo(48, y);
+    ctx.lineTo(width - 48, y);
+    ctx.stroke();
+  }
+  ctx.fillStyle = "#6B7280";
+  ctx.font = "13px Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+  ctx.fillText("暂无历史行情数据，等待行情源返回 K 线。", 28, 42);
+}
+
+function drawGrid(ctx, width, height, pad, priceBottom, volumeTop, minPrice, maxPrice) {
+  ctx.strokeStyle = "#F0EDE7";
+  ctx.lineWidth = 1;
+  ctx.fillStyle = "#9CA3AF";
+  ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
+  for (let i = 0; i <= 4; i++) {
+    const yLine = pad.top + (priceBottom - pad.top) * i / 4;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, yLine);
+    ctx.lineTo(width - pad.right, yLine);
+    ctx.stroke();
+    const label = maxPrice - (maxPrice - minPrice) * i / 4;
+    ctx.fillText(formatNumber(label), width - pad.right + 8, yLine + 4);
+  }
+  for (let i = 0; i <= 4; i++) {
+    const xLine = pad.left + (width - pad.left - pad.right) * i / 4;
+    ctx.beginPath();
+    ctx.moveTo(xLine, pad.top);
+    ctx.lineTo(xLine, volumeTop + 70);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.moveTo(pad.left, volumeTop);
+  ctx.lineTo(width - pad.right, volumeTop);
+  ctx.stroke();
+}
+
+function drawVolume(ctx, data, x, vy, volumeTop, volumeHeight, xStep) {
+  const barWidth = Math.max(2, Math.min(8, xStep * .58));
+  data.forEach((candle, index) => {
+    ctx.fillStyle = candle.close >= candle.open ? "rgba(214, 69, 69, .22)" : "rgba(46, 139, 87, .22)";
+    const top = vy(candle.volume);
+    ctx.fillRect(x(index) - barWidth / 2, top, barWidth, volumeTop + volumeHeight - top);
+  });
+}
+
+function drawLine(ctx, values, x, y, color, width) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.beginPath();
+  let started = false;
+  values.forEach((value, index) => {
+    if (!value) {
+      return;
+    }
+    if (!started) {
+      ctx.moveTo(x(index), y(value));
+      started = true;
+    } else {
+      ctx.lineTo(x(index), y(value));
+    }
+  });
+  if (started) {
+    ctx.stroke();
+  }
+}
+
+function drawAiMarker(ctx, data, aiAnalysis, x, y) {
+  if (!aiAnalysis || !data.length) {
+    return;
+  }
+  const index = data.length - 1;
+  const candle = data[index];
+  ctx.fillStyle = aiAnalysis.rating === "谨慎" ? "#2E8B57" : aiAnalysis.rating === "积极" ? "#D64545" : "#9A7B3F";
+  ctx.beginPath();
+  ctx.arc(x(index), y(candle.close), 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#9A7B3F";
+  ctx.font = "12px -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif";
+  ctx.fillText(`AI ${aiAnalysis.rating || "评级"}`, x(index) - 48, y(candle.close) - 12);
+}
+
+function drawCrosshair(ctx, x, top, bottom) {
+  ctx.save();
+  ctx.strokeStyle = "rgba(154, 123, 63, .36)";
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.moveTo(x, top);
+  ctx.lineTo(x, bottom);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function renderChartStats(candles, quote) {
+  const latest = candles?.[candles.length - 1] || null;
+  const high = candles?.length ? Math.max(...candles.map(candle => numeric(candle.high))) : numeric(quote?.highPrice);
+  const low = candles?.length ? Math.min(...candles.map(candle => numeric(candle.low))) : numeric(quote?.lowPrice);
+  const totalVolume = candles?.length ? candles.reduce((sum, candle) => sum + numeric(candle.volume), 0) : 0;
+  const first = candles?.[0];
+  const rangeReturn = first && latest && numeric(first.close) > 0
+    ? (numeric(latest.close) - numeric(first.close)) / numeric(first.close) * 100
+    : 0;
+  $("chartStats").innerHTML = [
+    ["区间涨跌", `${formatSigned(rangeReturn)}%`, rangeReturn >= 0 ? "up" : "down"],
+    ["区间最高", formatNumber(high), "up"],
+    ["区间最低", formatNumber(low), "down"],
+    ["成交量", formatVolume(totalVolume), ""],
+    ["最新日期", latest?.tradeDate || "--", ""]
+  ].map(([label, value, klass]) => `
+    <article>
+      <span>${label}</span>
+      <strong class="${klass}">${escapeHtml(value)}</strong>
+    </article>
+  `).join("");
+}
+
+function movingAverage(data, windowSize) {
+  return data.map((_, index) => {
+    if (index + 1 < windowSize) {
+      return null;
+    }
+    const slice = data.slice(index + 1 - windowSize, index + 1);
+    return slice.reduce((sum, candle) => sum + candle.close, 0) / windowSize;
+  });
+}
+
+function formatPoints(points) {
+  if (!Array.isArray(points) || !points.length) {
+    return "";
+  }
+  return points.slice(0, 4).join("；") + "。";
 }
 
 function healthChecks(metrics) {
@@ -138,10 +490,7 @@ function check(title, label, metricValue, good, watch, help, inverse = false) {
 }
 
 function formatMetric(value, raw = false) {
-  if (raw) {
-    return `${(value * 100).toFixed(2)}%`;
-  }
-  if (Math.abs(value) <= 2) {
+  if (raw || Math.abs(value) <= 2) {
     return `${(value * 100).toFixed(2)}%`;
   }
   return Number(value).toLocaleString("zh-CN");
@@ -205,6 +554,153 @@ function riskItems(risks, checks, quote) {
   return all.length ? all.join("") : item("暂未发现明显风险", "当前财务指标没有触发高风险规则，建议继续关注后续财报、公告和行业变化。");
 }
 
+function riskItemsFromAi(aiAnalysis) {
+  const risks = Array.isArray(aiAnalysis?.riskPoints) ? aiAnalysis.riskPoints : [];
+  return risks.length
+    ? risks.slice(0, 5).map((risk, index) => item(`AI 风险提示 ${index + 1}`, risk, aiAnalysis.source || "AI 分析")).join("")
+    : item("暂未发现明显风险", "AI 分析暂未给出明确风险点，但仍需结合后续财报、公告和行业变化。");
+}
+
+function item(title, body, meta = "") {
+  return `<div class="item"><h3>${escapeHtml(title)}</h3><p>${escapeHtml(body || "")}</p>${meta ? `<div class="meta">${escapeHtml(meta)}</div>` : ""}</div>`;
+}
+
+function qualityItem(label, value, level = "watch") {
+  return `
+    <div class="quality-item ${level}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>
+  `;
+}
+
+function riskSignalItems(risks, quote, aiAnalysis) {
+  const latest = latestCandles?.[latestCandles.length - 1] || null;
+  const last20 = Array.isArray(latestCandles) ? latestCandles.slice(-20) : [];
+  const avgVolume = last20.length
+    ? last20.reduce((sum, candle) => sum + numeric(candle.volume), 0) / last20.length
+    : 0;
+  const volumeRatio = avgVolume > 0 && latest ? numeric(latest.volume) / avgVolume : 0;
+  const changePercent = numeric(quote?.changePercent);
+  const trendLevel = changePercent <= -3 ? "risk" : changePercent < 0 ? "watch" : "good";
+  const volumeLevel = volumeRatio >= 1.8 ? "watch" : volumeRatio > 0 ? "good" : "watch";
+  const financialLevel = risks?.length ? "risk" : "good";
+  const evidenceCount = Array.isArray(aiAnalysis?.citations) ? aiAnalysis.citations.length : 0;
+  const newsLevel = evidenceCount ? "good" : "watch";
+
+  return [
+    signalItem("趋势", trendLevel, changePercent < 0
+      ? `短期涨跌幅 ${formatSigned(changePercent)}%，价格动能偏弱。`
+      : `短期涨跌幅 ${formatSigned(changePercent)}%，趋势压力暂不突出。`),
+    signalItem("成交量", volumeLevel, volumeRatio > 0
+      ? `最新成交量约为近 20 日均量的 ${volumeRatio.toFixed(2)} 倍。`
+      : "历史成交量样本不足，等待行情数据补齐。"),
+    signalItem("财报", financialLevel, risks?.length
+      ? risks.slice(0, 2).map(risk => risk.title).join("；")
+      : "财务规则暂未触发高风险项，继续跟踪盈利和现金流质量。"),
+    signalItem("新闻", newsLevel, evidenceCount
+      ? `已引用 ${evidenceCount} 条公告/财报证据，新闻风险需结合后续舆情扩展。`
+      : "新闻与公告证据暂未充分覆盖，建议补充外部资讯源。")
+  ];
+}
+
+function signalItem(label, level, text) {
+  const levelName = ({ good: "稳定", watch: "关注", risk: "风险" })[level] || "关注";
+  return `
+    <article class="signal-item ${level}">
+      <div><span>${escapeHtml(label)}</span><em>${escapeHtml(levelName)}</em></div>
+      <p>${escapeHtml(text)}</p>
+    </article>
+  `;
+}
+
+async function runWorkflow() {
+  $("runWorkflow").disabled = true;
+  renderUniverseStatus(`正在分析 ${symbol}...`);
+  try {
+    symbol = normalizeSymbol($("symbolInput").value);
+    $("symbolInput").value = symbol;
+    updateCompanyCard(latestQuote);
+    await request("/api/companies/batch-analysis", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ symbols: [symbol] })
+    });
+    await refresh();
+    await search();
+  } finally {
+    $("runWorkflow").disabled = false;
+  }
+}
+
+async function syncUniverse() {
+  $("syncUniverse").disabled = true;
+  renderUniverseStatus("正在同步股票池...");
+  try {
+    const result = await request("/api/companies/sync-a-shares", { method: "POST" });
+    companies = await request("/api/companies?limit=200").catch(() => companies);
+    companyTotal = Number(result.companyCount || companies.length || 0);
+    renderUniverseStatus(`股票池 ${result.companyCount} 只 · 本次保存 ${result.saved} 只`);
+    renderStockList();
+    await suggestStocks($("symbolInput").value);
+  } catch (error) {
+    renderUniverseStatus(`同步失败：${error.message}`);
+  } finally {
+    $("syncUniverse").disabled = false;
+  }
+}
+
+async function batchAnalyze() {
+  $("batchAnalyze").disabled = true;
+  renderUniverseStatus("正在提交批量分析...");
+  try {
+    const result = await request("/api/companies/batch-analysis", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ limit: 20 })
+    });
+    renderUniverseStatus(`已提交 ${result.submitted} 只，失败 ${result.failed} 只`);
+    await refresh();
+  } catch (error) {
+    renderUniverseStatus(`批量分析失败：${error.message}`);
+  } finally {
+    $("batchAnalyze").disabled = false;
+  }
+}
+
+async function suggestStocks(query) {
+  const normalized = String(query || "").trim();
+  const suggestions = normalized
+    ? await request(`/api/companies/search?q=${encodeURIComponent(normalized)}&limit=12`).catch(() => [])
+    : companies.slice(0, 12);
+  $("stockSuggestions").innerHTML = suggestions.map(company =>
+    `<option value="${escapeHtml(company.symbol)}">${escapeHtml(company.name)} · ${escapeHtml(company.exchange)} · ${escapeHtml(company.industry)}</option>`
+  ).join("");
+}
+
+async function search() {
+  const query = encodeURIComponent($("searchInput").value);
+  const results = await request(`/api/document-index/${symbol}/search?q=${query}`).catch(() => []);
+  $("retrievalList").innerHTML = results.map(hit =>
+    item(hit.title, hit.text, `${hit.section} · 相关度 ${Number(hit.score).toFixed(2)}`)
+  ).join("") || item("暂无证据", "点击生成 AI 研报后，系统会建立该股票的公开财报和公告证据索引。");
+}
+
+async function selectSymbol(nextSymbol) {
+  symbol = normalizeSymbol(nextSymbol);
+  $("symbolInput").value = symbol;
+  await refresh();
+  await search();
+}
+
+function ratingClass(rating) {
+  return rating === "积极" ? "positive" : rating === "谨慎" ? "cautious" : "neutral";
+}
+
+function analysisMeta(aiAnalysis) {
+  return `${aiAnalysis.aiGenerated ? "Ollama 本地模型" : "规则兜底"} · ${aiAnalysis.cacheHit ? "缓存命中" : "新报告"} · ${formatDateTime(aiAnalysis.generatedAt) || aiAnalysis.source || "AI 分析"}`;
+}
+
 function statusName(level) {
   return ({
     good: "健康",
@@ -214,47 +710,69 @@ function statusName(level) {
   })[level] || level;
 }
 
-async function runWorkflow() {
-  $("runWorkflow").disabled = true;
-  try {
-    symbol = normalizeSymbol($("symbolInput").value);
-    $("symbolInput").value = symbol;
-    updateCompanyCard();
-    await request(`/api/ingestion/${encodeURIComponent(symbol)}/async`, { method: "POST" });
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await refresh();
-    await search();
-  } finally {
-    $("runWorkflow").disabled = false;
-  }
+function formatPrice(value) {
+  const number = numeric(value);
+  return number > 0 ? number.toFixed(2) : "--";
 }
 
-async function search() {
-  const query = encodeURIComponent($("searchInput").value);
-  const results = await request(`/api/document-index/${symbol}/search?q=${query}`);
-  $("retrievalList").innerHTML = results.map(hit =>
-    item(hit.title, hit.text, `${hit.section} · 相关度 ${Number(hit.score).toFixed(2)}`)
-  ).join("") || item("暂无证据", "请先分析股票，系统会建立该股票的公开财报和公告证据索引。");
+function formatNumber(value, digits = 2) {
+  if (value == null || value === "") {
+    return "--";
+  }
+  const number = numeric(value);
+  return Number.isFinite(number) ? number.toFixed(digits) : "--";
 }
 
-$("runWorkflow").addEventListener("click", runWorkflow);
-$("searchButton").addEventListener("click", search);
-$("symbolInput").addEventListener("keydown", event => {
-  if (event.key === "Enter") {
-    runWorkflow();
+function formatSigned(value) {
+  const number = numeric(value);
+  if (!Number.isFinite(number)) {
+    return "--";
   }
-});
+  return `${number > 0 ? "+" : ""}${number.toFixed(2)}`;
+}
 
-document.querySelectorAll(".symbol-chip").forEach(button => {
-  button.addEventListener("click", () => {
-    $("symbolInput").value = button.dataset.symbol;
-    runWorkflow();
-  });
-});
+function formatVolume(value) {
+  const number = numeric(value);
+  if (number >= 100000000) {
+    return `${(number / 100000000).toFixed(2)}亿`;
+  }
+  if (number >= 10000) {
+    return `${(number / 10000).toFixed(2)}万`;
+  }
+  return number.toLocaleString("zh-CN");
+}
 
-refresh().then(search).catch(error => {
-  $("analysisConclusion").textContent = `后端服务未就绪：${error.message}`;
-});
+function formatMoney(value) {
+  const number = numeric(value);
+  if (!number) {
+    return "--";
+  }
+  if (number >= 100000000) {
+    return `${(number / 100000000).toFixed(2)}亿`;
+  }
+  if (number >= 10000) {
+    return `${(number / 10000).toFixed(2)}万`;
+  }
+  return number.toLocaleString("zh-CN");
+}
+
+function formatDateTime(value) {
+  return value ? String(value).replace("T", " ").replace("Z", "") : "";
+}
+
+function numeric(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
 
 function normalizeSymbol(value) {
   const next = String(value || "").trim().toUpperCase();
@@ -263,3 +781,33 @@ function normalizeSymbol(value) {
   }
   return next;
 }
+
+$("runWorkflow").addEventListener("click", runWorkflow);
+$("syncUniverse").addEventListener("click", syncUniverse);
+$("batchAnalyze").addEventListener("click", batchAnalyze);
+$("searchButton").addEventListener("click", search);
+$("symbolInput").addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    runWorkflow();
+  }
+});
+$("symbolInput").addEventListener("input", event => {
+  clearTimeout(suggestionTimer);
+  suggestionTimer = setTimeout(() => suggestStocks(event.target.value), 180);
+});
+document.querySelectorAll(".symbol-chip").forEach(button => {
+  button.addEventListener("click", () => selectSymbol(button.dataset.symbol));
+});
+document.querySelectorAll(".range-tab").forEach(button => {
+  button.addEventListener("click", async () => {
+    document.querySelectorAll(".range-tab").forEach(item => item.classList.remove("active"));
+    button.classList.add("active");
+    chartLimit = Number(button.dataset.limit || 120);
+    await refresh();
+  });
+});
+window.addEventListener("resize", () => renderChart(latestCandles, latestQuote, latestAiAnalysis));
+
+refresh().then(() => Promise.all([search(), suggestStocks(symbol)])).catch(error => {
+  $("analysisConclusion").textContent = `后端服务未就绪：${error.message}`;
+});
