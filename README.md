@@ -1,5 +1,7 @@
 # FinSight AI
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 ![Java](https://img.shields.io/badge/Java-17-blue)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-blue)
