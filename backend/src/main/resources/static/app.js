@@ -6,6 +6,8 @@ let chartLimit = 120;
 let latestQuote = null;
 let latestCandles = [];
 let latestAiAnalysis = null;
+let latestWorkflowSummary = null;
+let latestEvaluationRun = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -59,6 +61,7 @@ async function refresh() {
   renderAnalysis(metrics, risks, quote, aiAnalysis);
   renderChart(candles, quote, aiAnalysis);
   renderChartStats(candles, quote);
+  renderOpenSourceProof();
 }
 
 function updateCompanyCard(quote = null) {
@@ -120,6 +123,13 @@ function renderQuote(quote) {
     <section class="summary-price">
       <strong class="${direction}">${price > 0 ? price.toFixed(2) : "--"}</strong>
       <em class="${direction}">${formatSigned(change)} / ${formatSigned(changePercent)}%</em>
+    </section>
+    <section class="summary-facts">
+      <article><span>今开</span><strong>${formatNumber(quote.openPrice)}</strong></article>
+      <article><span>最高</span><strong>${formatNumber(quote.highPrice)}</strong></article>
+      <article><span>最低</span><strong>${formatNumber(quote.lowPrice)}</strong></article>
+      <article><span>成交额</span><strong>${formatMoney(amount)}</strong></article>
+      <article><span>数据源</span><strong>${escapeHtml(quote.source || "LOCAL")}</strong></article>
     </section>
   `;
 }
@@ -652,6 +662,44 @@ async function runWorkflow() {
   }
 }
 
+async function runOpenSourceDemo() {
+  const button = $("runDemo");
+  button.disabled = true;
+  button.textContent = "Running...";
+  renderUniverseStatus("正在执行完整 Demo...");
+  try {
+    symbol = normalizeSymbol($("symbolInput").value || "600519");
+    $("symbolInput").value = symbol;
+    const steps = [
+      ["初始化样例数据", () => request("/api/ingestion/demo", { method: "POST" })],
+      ["重算财务指标", () => request(`/api/metrics/recalculate/${symbol}`, { method: "POST" })],
+      ["重建证据索引", () => request(`/api/document-index/${symbol}/rebuild`, { method: "POST" })],
+      ["构建公司画像", () => request(`/api/intelligence/${symbol}/rebuild`, { method: "POST" })],
+      ["生成 AI 研报", () => request(`/api/companies/${symbol}/ai-analysis`)],
+      ["运行 RAG 评测", () => request("/api/evaluations/rag/run", { method: "POST" })]
+    ];
+    for (const [label, action] of steps) {
+      renderUniverseStatus(`Demo: ${label}...`);
+      const result = await action();
+      if (label === "生成 AI 研报") {
+        latestAiAnalysis = result;
+      }
+      if (label === "运行 RAG 评测") {
+        latestEvaluationRun = result;
+      }
+    }
+    await refresh();
+    await search();
+    await refreshOpenSourceProof(false);
+    renderUniverseStatus("Demo 已完成，可以查看报告、证据链和评测结果");
+  } catch (error) {
+    renderUniverseStatus(`Demo 失败：${error.message}`);
+  } finally {
+    button.disabled = false;
+    button.textContent = "Run Demo";
+  }
+}
+
 async function syncUniverse() {
   $("syncUniverse").disabled = true;
   renderUniverseStatus("正在同步股票池...");
@@ -711,6 +759,44 @@ async function search() {
       <span>${escapeHtml(hit.section)} · ${Number(hit.score).toFixed(2)}</span>
     </article>
   `).join("") || `<p>暂无证据预览。生成 AI 研报后，这里会显示最相关的 3 条证据。</p>`;
+}
+
+async function refreshOpenSourceProof(runEvaluation = false) {
+  const [workflowSummary, evaluationRun] = await Promise.all([
+    request("/api/workflows/summary").catch(() => latestWorkflowSummary),
+    runEvaluation
+      ? request("/api/evaluations/rag/run", { method: "POST" }).catch(() => latestEvaluationRun)
+      : Promise.resolve(latestEvaluationRun)
+  ]);
+  latestWorkflowSummary = workflowSummary;
+  latestEvaluationRun = evaluationRun;
+  renderOpenSourceProof();
+}
+
+function renderOpenSourceProof() {
+  const totalTasks = Number(latestWorkflowSummary?.total || 0);
+  const failed = Number(latestWorkflowSummary?.failedOrDeadLetter || 0);
+  const running = Number(latestWorkflowSummary?.counts?.RUNNING || 0);
+  const succeeded = Number(latestWorkflowSummary?.counts?.SUCCEEDED || 0);
+  $("workflowProof").textContent = totalTasks ? `${succeeded}/${totalTasks} tasks` : "Ready";
+  $("workflowProofMeta").textContent = totalTasks
+    ? `${running} running · ${failed} failed/dead-letter · stage distribution exposed by /api/workflows/summary`
+    : "状态机、幂等任务、Redis Lua Single-flight 和超时恢复已接入。";
+
+  const avgScore = latestEvaluationRun?.averageScore;
+  const passed = latestEvaluationRun?.passedCases;
+  const totalCases = latestEvaluationRun?.totalCases;
+  $("evaluationProof").textContent = avgScore != null ? `${Math.round(avgScore * 100)} / 100` : "Measurable";
+  $("evaluationProofMeta").textContent = avgScore != null
+    ? `${passed}/${totalCases} cases passed · RAG hit rate, evidence coverage, hallucination risk and consistency scored`
+    : "证据覆盖、幻觉风险、结论一致性和置信度校准会在 Demo 后展示。";
+
+  const reportVersion = latestAiAnalysis?.reportVersion;
+  const snapshotHash = latestAiAnalysis?.dataSnapshotHash;
+  $("cacheProof").textContent = reportVersion ? `v${reportVersion}` : "Snapshot-bound";
+  $("cacheProofMeta").textContent = snapshotHash
+    ? `snapshot ${snapshotHash.slice(0, 10)}... · cacheHit=${latestAiAnalysis.cacheHit}`
+    : "dataSnapshotHash + contextHash + reportVersion 防止复用过期结论。";
 }
 
 async function selectSymbol(nextSymbol) {
@@ -810,6 +896,7 @@ function normalizeSymbol(value) {
 }
 
 $("runWorkflow").addEventListener("click", runWorkflow);
+$("runDemo").addEventListener("click", runOpenSourceDemo);
 $("searchButton").addEventListener("click", search);
 $("openEvidence").addEventListener("click", () => {
   $("evidence").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -833,6 +920,6 @@ document.querySelectorAll(".range-tab").forEach(button => {
 });
 window.addEventListener("resize", () => renderChart(latestCandles, latestQuote, latestAiAnalysis));
 
-refresh().then(() => Promise.all([search(), suggestStocks(symbol)])).catch(error => {
+refresh().then(() => Promise.all([search(), suggestStocks(symbol), refreshOpenSourceProof(false)])).catch(error => {
   $("analysisConclusion").textContent = `后端服务未就绪：${error.message}`;
 });

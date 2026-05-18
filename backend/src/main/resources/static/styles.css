@@ -160,6 +160,17 @@ button.compact {
   padding: 8px 12px;
 }
 
+.demo-button {
+  border-color: rgba(255, 255, 255, .34);
+  background: rgba(255, 255, 255, .10);
+  color: #FFFFFF;
+}
+
+.demo-button:hover {
+  border-color: #FFFFFF;
+  background: rgba(255, 255, 255, .18);
+}
+
 button:disabled {
   opacity: .55;
   cursor: wait;
@@ -643,6 +654,46 @@ body::-webkit-scrollbar-thumb {
   align-items: center;
 }
 
+.proof-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr 1fr;
+  gap: 18px;
+}
+
+.proof-card {
+  display: grid;
+  gap: 8px;
+  min-height: 138px;
+  align-content: start;
+}
+
+.proof-card span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.proof-card strong {
+  color: var(--ink-strong);
+  font-size: 28px;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.proof-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.primary-proof {
+  border-color: rgba(154, 123, 63, .38);
+  background: linear-gradient(180deg, #FFFFFF 0%, #FBF7EF 100%);
+}
+
 .line {
   width: 18px;
   height: 3px;
@@ -1087,6 +1138,7 @@ body::-webkit-scrollbar-thumb {
   .market-summary,
   .main-grid,
   .health-grid,
+  .proof-grid,
   .summary-facts {
     grid-template-columns: 1fr;
   }

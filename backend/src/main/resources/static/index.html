@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FinSight Institutional Research Console</title>
   <link rel="icon" type="image/svg+xml" href="/brand-favicon.svg">
-  <link rel="stylesheet" href="/styles.css?v=20260513j">
+  <link rel="stylesheet" href="/styles.css?v=20260518a">
 </head>
 <body>
   <header class="terminal-topbar">
@@ -21,6 +21,7 @@
       <datalist id="stockSuggestions"></datalist>
       <span id="marketStatus" class="market-status">市场状态 待连接</span>
       <span id="universeStatus" class="top-updated">更新时间 --</span>
+      <button id="runDemo" class="demo-button" type="button">Run Demo</button>
       <button id="runWorkflow">生成 AI 研报</button>
     </div>
   </header>
@@ -108,6 +109,24 @@
         </section>
       </section>
 
+      <section id="openSourceProof" class="proof-grid">
+        <article class="panel proof-card primary-proof">
+          <span>Agent Workflow</span>
+          <strong id="workflowProof">--</strong>
+          <p id="workflowProofMeta">状态机、幂等任务、Redis Lua Single-flight 和超时恢复。</p>
+        </article>
+        <article class="panel proof-card">
+          <span>RAG Evaluation</span>
+          <strong id="evaluationProof">--</strong>
+          <p id="evaluationProofMeta">证据覆盖、幻觉风险、结论一致性和置信度校准。</p>
+        </article>
+        <article class="panel proof-card">
+          <span>Report Cache</span>
+          <strong id="cacheProof">Snapshot-bound</strong>
+          <p id="cacheProofMeta">dataSnapshotHash + contextHash + reportVersion 防止复用过期结论。</p>
+        </article>
+      </section>
+
       <section id="health" class="panel">
         <div class="section-title">
           <div>
@@ -174,6 +193,6 @@
     </aside>
   </main>
 
-  <script src="/app.js?v=20260513j"></script>
+  <script src="/app.js?v=20260518a"></script>
 </body>
 </html>

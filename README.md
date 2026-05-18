@@ -10,6 +10,8 @@ Open-source AI equity research agent with evidence-grounded reports, resilient w
 
 FinSight turns filings, financial reports, research notes, market data, and company events into source-grounded answers and versioned AI research reports. The project is intentionally backend-heavy: it shows how to build the infrastructure around an AI agent, not just how to call a model.
 
+![FinSight dashboard preview](docs/dashboard-preview.png)
+
 ## Why It Exists
 
 Most RAG demos stop at "retrieve chunks and ask an LLM." FinSight focuses on the parts that make an AI research system dependable:
@@ -57,6 +59,7 @@ More detail: [Architecture Notes](docs/architecture.md)
 - [Architecture Notes](docs/architecture.md)
 - [Resume And Interview Notes](docs/resume-and-interview.md)
 - [GitHub Presentation Snippets](docs/github-profile.md)
+- [Troubleshooting](docs/troubleshooting.md)
 
 ## Quick Start
 
@@ -97,6 +100,16 @@ POST /api/evaluations/rag/run
 GET  /api/companies/600519/ai-analysis/latest
 GET  /api/document-index/600519/search?q=现金流风险
 ```
+
+Example demo output after `./scripts/quick-demo.sh`:
+
+| Signal | Example Result |
+| --- | --- |
+| Agent workflow | `1/1 tasks`, `0 failed/dead-letter` |
+| RAG evaluation | `85 / 100`, `2/3 cases passed` |
+| Evidence index | `6 documents`, `6 chunks` for `600519` |
+| Intelligence graph | `20 events`, `36 entities`, `47 relations` |
+| Report cache | `dataSnapshotHash + contextHash + reportVersion` |
 
 ### 3. Run without Docker
 
