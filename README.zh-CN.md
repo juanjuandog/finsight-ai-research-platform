@@ -2,6 +2,8 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
+![CI](https://github.com/juanjuandog/finsight-ai-research-platform/actions/workflows/ci.yml/badge.svg)
+![License](https://img.shields.io/badge/License-MIT-green)
 ![Java](https://img.shields.io/badge/Java-17-blue)
 ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-pgvector-blue)
@@ -59,9 +61,13 @@ flowchart LR
 ## 文档
 
 - [Architecture Notes](docs/architecture.md)
+- [Agent Workflow Design](docs/design-agent-workflow.md)
+- [Benchmark And Evaluation Notes](docs/benchmark.md)
 - [Resume And Interview Notes](docs/resume-and-interview.md)
 - [GitHub Presentation Snippets](docs/github-profile.md)
 - [Troubleshooting](docs/troubleshooting.md)
+- [Roadmap](ROADMAP.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## 快速开始
 
