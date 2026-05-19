@@ -21,7 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers(disabledWithoutDocker = true)
 @ActiveProfiles({"postgres", "rabbitmq", "prod"})
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-        "finsight.ai-service.enabled=false"
+        "finsight.ai-service.enabled=false",
+        "management.health.rabbit.enabled=false",
+        "management.health.redis.enabled=false"
 })
 class FinSightInfrastructureSmokeTest {
     @Container
